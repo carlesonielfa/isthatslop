@@ -152,7 +152,7 @@ export const sources = pgTable(
       .on(table.id)
       .where(sql`${table.deletedAt} IS NULL`),
     check("sources_max_depth", sql`${table.depth} <= 5`),
-  ]
+  ],
 );
 
 // =============================================================================
@@ -167,11 +167,12 @@ export const sourceScoreCache = pgTable(
       .references(() => sources.id, { onDelete: "cascade" }),
     tier: numeric("tier", { precision: 2, scale: 1 }), // 0-6 scale
     reviewCount: integer("review_count").default(0).notNull(),
-    tierDistribution: jsonb("tier_distribution").$type<Record<number, number>>(), // {0: count, 1: count, ..., 6: count}
+    tierDistribution:
+      jsonb("tier_distribution").$type<Record<number, number>>(), // {0: count, 1: count, ..., 6: count}
     lastCalculatedAt: timestamp("last_calculated_at"),
     recalculationRequestedAt: timestamp("recalculation_requested_at"),
   },
-  (table) => [index("source_score_cache_tier_idx").on(table.tier)]
+  (table) => [index("source_score_cache_tier_idx").on(table.tier)],
 );
 
 // =============================================================================
@@ -207,7 +208,7 @@ export const reviews = pgTable(
       .on(table.sourceId, table.createdAt)
       .where(sql`${table.deletedAt} IS NULL`),
     check("reviews_tier_range", sql`${table.tier} >= 0 AND ${table.tier} <= 6`),
-  ]
+  ],
 );
 
 // =============================================================================
@@ -225,7 +226,7 @@ export const reviewEvidence = pgTable(
     caption: text("caption"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("review_evidence_review_idx").on(table.reviewId)]
+  (table) => [index("review_evidence_review_idx").on(table.reviewId)],
 );
 
 // =============================================================================
@@ -247,7 +248,7 @@ export const reviewVotes = pgTable(
   (table) => [
     primaryKey({ columns: [table.reviewId, table.userId] }),
     index("review_votes_review_idx").on(table.reviewId),
-  ]
+  ],
 );
 
 // =============================================================================
@@ -274,7 +275,7 @@ export const flags = pgTable(
       .on(table.createdAt)
       .where(sql`${table.status} = 'pending'`),
     index("flags_target_idx").on(table.targetType, table.targetId),
-  ]
+  ],
 );
 
 // =============================================================================
@@ -298,7 +299,7 @@ export const moderationLogs = pgTable(
     index("moderation_logs_moderator_idx").on(table.moderatorId),
     index("moderation_logs_target_idx").on(table.targetType, table.targetId),
     index("moderation_logs_created_idx").on(table.createdAt),
-  ]
+  ],
 );
 
 // =============================================================================
@@ -330,7 +331,7 @@ export const sourceScoreCacheRelations = relations(
       fields: [sourceScoreCache.sourceId],
       references: [sources.id],
     }),
-  })
+  }),
 );
 
 export const reviewsRelations = relations(reviews, ({ one, many }) => ({

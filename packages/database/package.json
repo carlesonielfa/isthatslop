@@ -14,7 +14,8 @@
     "generate:component": "turbo gen react-component",
     "check-types": "tsc --noEmit",
     "db:generate": "bunx drizzle-kit generate",
-    "db:migrate": "bunx drizzle-kit migrate"
+    "db:migrate": "bunx drizzle-kit migrate",
+    "db:seed": "bun run src/seed.ts"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

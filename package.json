@@ -10,7 +10,8 @@
     "compose:up": "docker compose -f tools/docker-isthatslop-local/compose.yml up -d",
     "compose:down": "docker compose -f tools/docker-isthatslop-local/compose.yml down",
     "db:generate": "bun -F @repo/database db:generate",
-    "db:migrate": "bun -F @repo/database db:migrate"
+    "db:migrate": "bun -F @repo/database db:migrate",
+    "db:seed": "bun -F @repo/database db:seed"
   },
   "devDependencies": {
     "prettier": "^3.7.4",

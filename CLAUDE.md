@@ -37,14 +37,17 @@ bun run compose:down  # Stop PostgreSQL container
 This is a Turborepo monorepo with the following structure:
 
 ### Apps
+
 - **apps/web**: Next.js 16 frontend with React 19, using the App Router
 
 ### Packages
+
 - **packages/database**: Drizzle ORM with PostgreSQL - contains schema definitions and database client
 - **packages/eslint-config**: Shared ESLint configurations (base, next, react-internal)
 - **packages/typescript-config**: Shared TypeScript configurations
 
 ### Key Files
+
 - `turbo.json`: Turborepo task configuration
 - `packages/database/src/schema.ts`: Database schema definitions
 - `packages/database/drizzle.config.ts`: Drizzle ORM configuration
@@ -68,6 +71,7 @@ Environment variable required: `DATABASE_URL`
 ## UI Components
 
 Components in `apps/web/components/ui/` follow a Windows 95 aesthetic with:
+
 - 3D beveled buttons
 - Sunken text inputs
 - Window-style cards with title bars
@@ -75,4 +79,4 @@ Components in `apps/web/components/ui/` follow a Windows 95 aesthetic with:
 
 ## Project Notes
 
-* After any notable changes to the code, run `bun format` `bun lint` and `bun check-types` to ensure code quality.
+- After any notable changes to the code, run `bun format` `bun lint` and `bun check-types` to ensure code quality.

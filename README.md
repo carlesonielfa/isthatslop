@@ -12,15 +12,15 @@ The site features a nostalgic Windows 95 aesthetic that celebrates the human-dri
 
 ## The 7-Tier Scale
 
-| Tier | Name | Description |
-|------|------|-------------|
-| 0 | Pure Artisanal | Purely human-crafted, no AI involvement |
-| 1 | Human (AI-Inspired) | Human creates the work, AI provided initial inspiration |
-| 2 | Human (AI-Polished) | Human-created with AI used only for polish/refinement |
-| 3 | Co-Created | Genuine collaboration with significant contribution from both |
-| 4 | AI-Generated (Human-Guided) | AI creates with substantial human direction and curation |
-| 5 | AI-Generated (Light Edit) | AI generates core content with minor human corrections |
-| 6 | Pure AI Slop | Fully AI-generated with no human oversight |
+| Tier | Name                        | Description                                                   |
+| ---- | --------------------------- | ------------------------------------------------------------- |
+| 0    | Pure Artisanal              | Purely human-crafted, no AI involvement                       |
+| 1    | Human (AI-Inspired)         | Human creates the work, AI provided initial inspiration       |
+| 2    | Human (AI-Polished)         | Human-created with AI used only for polish/refinement         |
+| 3    | Co-Created                  | Genuine collaboration with significant contribution from both |
+| 4    | AI-Generated (Human-Guided) | AI creates with substantial human direction and curation      |
+| 5    | AI-Generated (Light Edit)   | AI generates core content with minor human corrections        |
+| 6    | Pure AI Slop                | Fully AI-generated with no human oversight                    |
 
 ## Tech Stack
 
@@ -82,6 +82,7 @@ bun run db:migrate    # Run database migrations
 This is an early-stage project being built in public. While we're not actively seeking contributions at this time, bug fixes and small improvements are welcome.
 
 If you find an issue:
+
 1. Check [existing issues](https://github.com/carlesonielfa/isthatslop/issues) first
 2. Open a new issue describing the bug
 3. If you'd like to fix it yourself, submit a PR referencing the issue
@@ -93,6 +94,7 @@ For questions and discussions, use [GitHub Discussions](https://github.com/carle
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
 
 This means:
+
 - You can use, modify, and distribute this software
 - If you run a modified version as a network service, you must make your source code available
 - Any derivative work must also be licensed under AGPL-3.0
