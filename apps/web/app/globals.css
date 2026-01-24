@@ -25,6 +25,7 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-border-dark: var(--border-dark);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -48,9 +49,9 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: rgb(192 192 192);
   --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
+  --card: rgb(192 192 192);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
@@ -63,9 +64,10 @@
   --accent: oklch(0.61 0.11 222);
   --accent-foreground: oklch(0.98 0.02 201);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
+  --border: rgb(247 247 247);
+  --border-dark: rgb(96 96 96);
+  --input: rgb(247 247 247);
+  --ring: rgb(96 96 96);
   --chart-1: oklch(0.87 0.12 207);
   --chart-2: oklch(0.80 0.13 212);
   --chart-3: oklch(0.71 0.13 215);
@@ -120,7 +122,49 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-size: 112.5%; /* 19px base instead of 16px - adjust as needed */
+  }
   body {
     @apply bg-background text-foreground;
   }
+}
+
+[class*="ring-"]:not([class*="ring-0"]):not([class*="ring-inset"]) {
+  --tw-ring-shadow: none !important;
+  box-shadow: none !important;
+  border-width: 1px;
+  border-style: solid;
+  border-top-color: var(--border);
+  border-left-color: var(--border);
+  border-bottom-color: var(--border-dark);
+  border-right-color: var(--border-dark);
+}
+
+[class*="ring-inset"] {
+  --tw-ring-shadow: none !important;
+  box-shadow: none !important;
+  border-width: 1px;
+  border-style: solid;
+  border-top-color: var(--border-dark);
+  border-left-color: var(--border-dark);
+  border-bottom-color: var(--border);
+  border-right-color: var(--border);
+}
+
+/* Win95 focus style - solid black outline */
+:focus-visible {
+  outline: 1px solid var(--color-foreground) !important;
+}
+
+/* Ensure focus outline shows on interactive elements */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+[role="button"]:focus-visible,
+[role="combobox"]:focus-visible {
+  outline: 1px solid var(--color-foreground) !important;
 }

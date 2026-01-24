@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
 
 import {
   Example,
@@ -23,12 +22,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
+  CardTitleBar,
 } from "@/components/ui/card"
 import {
   Combobox,
@@ -82,6 +81,7 @@ function CardExample() {
     <Example title="Card" className="items-center justify-center">
       <Card className="relative w-full max-w-sm overflow-hidden pt-0">
         <div className="bg-primary absolute inset-0 z-30 aspect-video opacity-50 mix-blend-color" />
+        {// eslint-disable-next-line @next/next/no-img-element
         <img
           src="https://images.unsplash.com/photo-1604076850742-4c7221f3101b?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Photo by mymind on Unsplash"
@@ -90,6 +90,7 @@ function CardExample() {
           height={225}
           className="relative z-20 aspect-video w-full object-cover brightness-60 grayscale"
         />
+        }
         <CardHeader>
           <CardTitle>Observability Plus is replacing Monitoring</CardTitle>
           <CardDescription>
@@ -151,15 +152,13 @@ function FormExample() {
 
   return (
     <Example title="Form">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>User Information</CardTitle>
-          <CardDescription>Please fill in your details below</CardDescription>
-          <CardAction>
+      <Card className="w-full max-w-md pt-0">
+        <CardTitleBar
+          actions={
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <DotsThreeVerticalIcon
+                <Button variant="ghost" size="icon-2xs" >
+                  <DotsThreeVerticalIcon weight="bold"
                   />
                   <span className="sr-only">More options</span>
                 </Button>
@@ -423,7 +422,12 @@ function FormExample() {
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-          </CardAction>
+          }
+        >
+          User Information
+        </CardTitleBar>
+        <CardHeader>
+          <CardDescription>Please fill in your details below</CardDescription>
         </CardHeader>
         <CardContent>
           <form>

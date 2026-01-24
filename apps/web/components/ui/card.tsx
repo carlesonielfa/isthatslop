@@ -11,7 +11,7 @@ function Card({
     <div
       data-slot="card"
       data-size={size}
-      className={cn("ring-foreground/10 bg-card text-card-foreground gap-4 overflow-hidden rounded-none py-4 text-xs/relaxed ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-2 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-none *:[img:last-child]:rounded-none group/card flex flex-col", className)}
+      className={cn("bg-card text-card-foreground gap-4 overflow-hidden rounded-none py-4 text-xs/relaxed ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-2 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-none *:[img:last-child]:rounded-none group/card flex flex-col", className)}
       {...props}
     />
   )
@@ -47,6 +47,32 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("text-muted-foreground text-xs/relaxed", className)}
       {...props}
     />
+  )
+}
+
+function CardTitleBar({
+  className,
+  icon,
+  actions,
+  children,
+  ...props
+}: React.ComponentProps<"div"> & {
+  icon?: React.ReactNode
+  actions?: React.ReactNode
+}) {
+  return (
+    <div
+      data-slot="card-title-bar"
+      className={cn(
+        "bg-primary text-primary-foreground flex items-center gap-2 p-1 pl-2 font-medium text-sm",
+        className
+      )}
+      {...props}
+    >
+      {icon && <span className="shrink-0">{icon}</span>}
+      <span className="flex-1 truncate">{children}</span>
+      {actions && <span className="flex items-center gap-0.5 shrink-0 bg-background text-foreground">{actions}</span>}
+    </div>
   )
 }
 
@@ -88,6 +114,7 @@ export {
   CardHeader,
   CardFooter,
   CardTitle,
+  CardTitleBar,
   CardAction,
   CardDescription,
   CardContent,
