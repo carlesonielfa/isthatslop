@@ -1,135 +1,103 @@
-# Turborepo starter
+# IsThatSlop.com
 
-This Turborepo starter is maintained by the Turborepo core team.
+A community-driven database for identifying and evaluating whether content sources are AI-generated or human-created. Rate sources on a 7-tier scale from "Pure Artisanal" to "Pure AI Slop."
 
-## Using this example
+## About
 
-Run the following command:
+IsThatSlop.com addresses the growing need for transparency in AI-generated content across the internet. Inspired by [ProtonDB's](https://www.protondb.com/) community scoring model, the platform enables users to collaboratively verify content authenticity.
 
-```sh
-npx create-turbo@latest
-```
+The site features a nostalgic Windows 95 aesthetic that celebrates the human-driven internet era.
 
-## What's inside?
+**This project is being built in public.** Follow along as we develop a community-driven platform for content authenticity.
 
-This Turborepo includes the following packages/apps:
+## The 7-Tier Scale
 
-### Apps and Packages
+| Tier | Name | Description |
+|------|------|-------------|
+| 0 | Pure Artisanal | Purely human-crafted, no AI involvement |
+| 1 | Human (AI-Inspired) | Human creates the work, AI provided initial inspiration |
+| 2 | Human (AI-Polished) | Human-created with AI used only for polish/refinement |
+| 3 | Co-Created | Genuine collaboration with significant contribution from both |
+| 4 | AI-Generated (Human-Guided) | AI creates with substantial human direction and curation |
+| 5 | AI-Generated (Light Edit) | AI generates core content with minor human corrections |
+| 6 | Pure AI Slop | Fully AI-generated with no human oversight |
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Tech Stack
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+- **Runtime**: Bun
+- **Frontend**: Next.js, React 19, Tailwind CSS
+- **Database**: PostgreSQL with Drizzle ORM
+- **Auth**: better-auth
+- **Build**: Turborepo
 
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+## Project Structure
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+apps/
+  web/          # Next.js web application
+  extension/    # Browser extension (planned)
+packages/
+  database/     # Drizzle ORM schema and client
+  eslint-config/
+  typescript-config/
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Development
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+### Prerequisites
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+- [Bun](https://bun.sh/) >= 1.3.3
+- [Docker](https://www.docker.com/) (for local PostgreSQL)
 
-### Develop
+### Setup
 
-To develop all apps and packages, run the following command:
+```bash
+# Install dependencies
+bun install
 
-```
-cd my-turborepo
+# Start PostgreSQL
+bun run compose:up
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+# Run database migrations
+bun run db:migrate
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+# Start development server
+bun run dev
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Commands
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+bun run dev           # Start development server
+bun run build         # Build all apps and packages
+bun run lint          # Run ESLint
+bun run format        # Run Prettier
+bun run check-types   # TypeScript type checking
+bun run db:generate   # Generate Drizzle migrations
+bun run db:migrate    # Run database migrations
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## Contributing
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+This is an early-stage project being built in public. While we're not actively seeking contributions at this time, bug fixes and small improvements are welcome.
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
+If you find an issue:
+1. Check [existing issues](https://github.com/carlesonielfa/isthatslop/issues) first
+2. Open a new issue describing the bug
+3. If you'd like to fix it yourself, submit a PR referencing the issue
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
+For questions and discussions, use [GitHub Discussions](https://github.com/carlesonielfa/isthatslop/discussions).
 
-## Useful Links
+## License
 
-Learn more about the power of Turborepo:
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+This means:
+- You can use, modify, and distribute this software
+- If you run a modified version as a network service, you must make your source code available
+- Any derivative work must also be licensed under AGPL-3.0
+
+## Acknowledgments
+
+- Inspired by [ProtonDB](https://www.protondb.com/) for the community-driven rating model
+- Windows 95 aesthetic pays homage to a more human internet era
