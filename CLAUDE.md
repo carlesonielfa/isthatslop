@@ -68,6 +68,19 @@ Schema uses Drizzle ORM with PostgreSQL. Current tables: user, session, account,
 
 Environment variable required: `DATABASE_URL`
 
+## Data Access Layer (DAL)
+
+The web app follows the [Next.js Data Access Layer pattern](https://nextjs.org/docs/app/guides/data-security#data-access-layer) for secure, centralized data fetching.
+
+**Location**: `apps/web/data/`
+
+**Key principles**:
+
+- All data fetching functions use `import "server-only"` to prevent client-side imports
+- Functions are wrapped with React `cache()` for request deduplication
+- Return DTOs (Data Transfer Objects) with only safe-to-expose fields
+- Database queries and sensitive logic stay server-side
+
 ## UI Components
 
 Components in `apps/web/components/ui/` follow a Windows 95 aesthetic with:

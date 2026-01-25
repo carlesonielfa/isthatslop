@@ -12,7 +12,7 @@ export function HeroSection() {
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
       >
-        <source src="/hero-bg.mp4" type="video/mp4" />
+        <source src="/hero-bg.webm" type="video/mp4" />
       </video>
       {/* Primary color tint overlay - full recolor */}
       <div className="absolute inset-0 bg-primary mix-blend-color" />
@@ -23,8 +23,10 @@ export function HeroSection() {
         <h1 className="font-bold text-4xl md:text-5xl lg:text-6xl mb-6 sm:mb-12">
           [IsThatSlop.com]
         </h1>
-        <h2 className="text-2xl md:text-3xl lg:text-4xl font-serif  mb-6 leading-tight tracking-tight">
-          <span className="block font-semibold">Track AI slop you&apos;ve seen.</span>
+        <h2 className="text-2xl md:text-3xl lg:text-4xl font-serif  mb-6 leading-snug">
+          <span className="block font-semibold">
+            Track AI slop you&apos;ve seen.
+          </span>
           <span className="block">Prevent seeing more of it.</span>
           <span className="block">
             Tell the world what&apos;s{" "}
@@ -43,7 +45,9 @@ export function HeroSection() {
         <p className="text-sm mt-6 text-secondary text-shadow-xs">
           The community database for human-made content.
         </p>
-        <p className="text-sm mt-1 text-secondary text-shadow-xs">Soon available as a browser extension.</p>
+        <p className="text-sm mt-1 text-secondary text-shadow-xs">
+          Soon available as a browser extension.
+        </p>
       </div>
     </section>
   );
