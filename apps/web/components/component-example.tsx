@@ -178,7 +178,7 @@ function FormExample() {
 
   return (
     <Example title="Form">
-      <Card className="w-full max-w-md pt-0">
+      <Card className="w-full max-w-md">
         <CardTitleBar
           actions={
             <DropdownMenu>
