@@ -2,7 +2,8 @@ import "server-only";
 
 import { cache } from "react";
 import { db, sources, sourceScoreCache, reviews, user } from "@repo/database";
-import { desc, eq, isNull, count } from "drizzle-orm";
+import { desc, eq, isNull, count, and, sql, asc } from "drizzle-orm";
+import { formatTimeAgo } from "@/lib/date";
 
 /**
  * Wrapper for database queries that handles connection errors gracefully.
@@ -58,23 +59,6 @@ export const tiers = [
 ] as const;
 
 export type TierInfo = (typeof tiers)[number];
-
-// Helper function to format time ago
-// TODO: Use a proper date-fns or dayjs library for localization and better formatting
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffDays > 0) {
-    return `${diffDays}d`;
-  }
-  if (diffHours > 0) {
-    return `${diffHours}h`;
-  }
-  return "now";
-}
 
 /**
  * Get recent sources with their scores and review counts.
@@ -218,5 +202,294 @@ export const getSiteStatsDTO = cache(async (): Promise<SiteStatsDTO> => {
     },
     { sources: 0, reviews: 0, users: 0 },
     "getSiteStatsDTO",
+  );
+});
+
+// =============================================================================
+// BROWSE / SEARCH DATA ACCESS
+// =============================================================================
+
+export interface SourceTreeNodeDTO {
+  id: string;
+  slug: string;
+  name: string;
+  type: string | null;
+  tier: number | null;
+  reviewCount: number;
+  depth: number;
+  parentId: string | null;
+  childCount: number;
+  isMatch: boolean; // true if this item matched the search, false if it's an ancestor for context
+}
+
+export interface BrowseFilters {
+  query?: string;
+  type?: string;
+  tierMin?: number;
+  tierMax?: number;
+}
+
+// Maximum depth to load initially (0 = root only, 1 = root + direct children)
+const INITIAL_LOAD_DEPTH = 1;
+// Maximum children to show per parent before "load more"
+const CHILDREN_PER_PAGE = 20;
+
+/**
+ * Get sources for the browse page with optional filters.
+ * Returns a flat list that can be rendered as a tree on the client.
+ * - Without filters: loads only depth 0-1 for fast initial load
+ * - With filters: loads matching sources + their ancestors
+ */
+export const getSourcesForBrowseDTO = cache(
+  async (filters: BrowseFilters = {}): Promise<SourceTreeNodeDTO[]> => {
+    return safeQuery(
+      async () => {
+        const hasFilters =
+          filters.query ||
+          filters.type ||
+          filters.tierMin !== undefined ||
+          filters.tierMax !== undefined;
+
+        // Build filter conditions
+        const filterConditions = [isNull(sources.deletedAt)];
+
+        if (filters.type) {
+          filterConditions.push(eq(sources.type, filters.type));
+        }
+        if (filters.tierMin !== undefined) {
+          filterConditions.push(
+            sql`COALESCE(${sourceScoreCache.tier}, 3) >= ${filters.tierMin}`,
+          );
+        }
+        if (filters.tierMax !== undefined) {
+          filterConditions.push(
+            sql`COALESCE(${sourceScoreCache.tier}, 3) <= ${filters.tierMax}`,
+          );
+        }
+        if (filters.query) {
+          const searchTerm = `%${filters.query}%`;
+          filterConditions.push(
+            sql`(${sources.name} ILIKE ${searchTerm} OR ${sources.description} ILIKE ${searchTerm})`,
+          );
+        }
+
+        // If no filters, only load shallow tree (depth 0-1)
+        if (!hasFilters) {
+          filterConditions.push(sql`${sources.depth} <= ${INITIAL_LOAD_DEPTH}`);
+        }
+
+        // Get the matching sources
+        const matchingResults = await db
+          .select({
+            id: sources.id,
+            slug: sources.slug,
+            name: sources.name,
+            type: sources.type,
+            depth: sources.depth,
+            parentId: sources.parentId,
+            path: sources.path,
+            tier: sourceScoreCache.tier,
+            reviewCount: sourceScoreCache.reviewCount,
+          })
+          .from(sources)
+          .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+          .where(and(...filterConditions))
+          .orderBy(asc(sources.depth), asc(sources.name))
+          .limit(200);
+
+        const matchingIds = new Set(matchingResults.map((r) => r.id));
+
+        // If we have filters and results, also fetch ancestors to maintain tree structure
+        let ancestorResults: typeof matchingResults = [];
+        if (hasFilters && matchingResults.length > 0) {
+          // Extract all ancestor IDs from the path column
+          // Path format: "uuid1.uuid2.uuid3" where uuid3 is the source itself
+          const ancestorIds = new Set<string>();
+          for (const row of matchingResults) {
+            if (row.path) {
+              const pathParts = row.path.split(".");
+              // Add all ancestors (excluding the item itself which is the last part)
+              for (let i = 0; i < pathParts.length - 1; i++) {
+                const ancestorId = pathParts[i];
+                if (ancestorId && !matchingIds.has(ancestorId)) {
+                  ancestorIds.add(ancestorId);
+                }
+              }
+            }
+          }
+
+          // Fetch ancestor sources if any
+          if (ancestorIds.size > 0) {
+            const ancestorIdArray = Array.from(ancestorIds);
+            ancestorResults = await db
+              .select({
+                id: sources.id,
+                slug: sources.slug,
+                name: sources.name,
+                type: sources.type,
+                depth: sources.depth,
+                parentId: sources.parentId,
+                path: sources.path,
+                tier: sourceScoreCache.tier,
+                reviewCount: sourceScoreCache.reviewCount,
+              })
+              .from(sources)
+              .leftJoin(
+                sourceScoreCache,
+                eq(sources.id, sourceScoreCache.sourceId),
+              )
+              .where(
+                and(
+                  sql`${sources.id} = ANY(ARRAY[${sql.raw(ancestorIdArray.map((id) => `'${id}'::uuid`).join(","))}])`,
+                  isNull(sources.deletedAt),
+                ),
+              )
+              .orderBy(asc(sources.depth), asc(sources.name));
+          }
+        }
+
+        // Combine matching and ancestor results
+        const allResults = [...ancestorResults, ...matchingResults];
+
+        // Dedupe by ID (ancestors might overlap)
+        const seenIds = new Set<string>();
+        const deduped = allResults.filter((row) => {
+          if (seenIds.has(row.id)) return false;
+          seenIds.add(row.id);
+          return true;
+        });
+
+        // Sort by depth then name
+        deduped.sort((a, b) => {
+          if (a.depth !== b.depth) return a.depth - b.depth;
+          return a.name.localeCompare(b.name);
+        });
+
+        // Get child counts
+        const ids = deduped.map((r) => r.id);
+        const childCounts =
+          ids.length > 0
+            ? await db
+                .select({
+                  parentId: sources.parentId,
+                  count: count(),
+                })
+                .from(sources)
+                .where(
+                  and(
+                    sql`${sources.parentId} = ANY(ARRAY[${sql.raw(ids.map((id) => `'${id}'::uuid`).join(","))}])`,
+                    isNull(sources.deletedAt),
+                  ),
+                )
+                .groupBy(sources.parentId)
+            : [];
+
+        const childCountMap = new Map(
+          childCounts.map((c) => [c.parentId, c.count]),
+        );
+
+        return deduped.map((row) => ({
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          type: row.type,
+          tier: row.tier ? Math.round(Number(row.tier)) : null,
+          reviewCount: row.reviewCount ?? 0,
+          depth: row.depth,
+          parentId: row.parentId,
+          childCount: childCountMap.get(row.id) ?? 0,
+          isMatch: matchingIds.has(row.id),
+        }));
+      },
+      [],
+      "getSourcesForBrowseDTO",
+    );
+  },
+);
+
+/**
+ * Get children of a specific source for lazy loading.
+ * Used when expanding a node in the tree view.
+ */
+export async function getSourceChildrenDTO(
+  parentId: string,
+  limit: number = CHILDREN_PER_PAGE,
+  offset: number = 0,
+): Promise<{ children: SourceTreeNodeDTO[]; hasMore: boolean }> {
+  const result = await db
+    .select({
+      id: sources.id,
+      slug: sources.slug,
+      name: sources.name,
+      type: sources.type,
+      depth: sources.depth,
+      parentId: sources.parentId,
+      tier: sourceScoreCache.tier,
+      reviewCount: sourceScoreCache.reviewCount,
+    })
+    .from(sources)
+    .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+    .where(and(eq(sources.parentId, parentId), isNull(sources.deletedAt)))
+    .orderBy(desc(sourceScoreCache.reviewCount), asc(sources.name))
+    .limit(limit + 1) // Fetch one extra to check if there are more
+    .offset(offset);
+
+  const hasMore = result.length > limit;
+  const children = result.slice(0, limit);
+
+  // Get child counts for these children
+  const ids = children.map((r) => r.id);
+  const childCounts =
+    ids.length > 0
+      ? await db
+          .select({
+            parentId: sources.parentId,
+            count: count(),
+          })
+          .from(sources)
+          .where(
+            and(
+              sql`${sources.parentId} = ANY(ARRAY[${sql.raw(ids.map((id) => `'${id}'::uuid`).join(","))}])`,
+              isNull(sources.deletedAt),
+            ),
+          )
+          .groupBy(sources.parentId)
+      : [];
+
+  const childCountMap = new Map(childCounts.map((c) => [c.parentId, c.count]));
+
+  return {
+    children: children.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      type: row.type,
+      tier: row.tier ? Math.round(Number(row.tier)) : null,
+      reviewCount: row.reviewCount ?? 0,
+      depth: row.depth,
+      parentId: row.parentId,
+      childCount: childCountMap.get(row.id) ?? 0,
+      isMatch: true, // Lazy-loaded children are always "matches" in context
+    })),
+    hasMore,
+  };
+}
+
+/**
+ * Get unique source types for filter dropdown.
+ */
+export const getSourceTypesDTO = cache(async (): Promise<string[]> => {
+  return safeQuery(
+    async () => {
+      const result = await db
+        .selectDistinct({ type: sources.type })
+        .from(sources)
+        .where(and(isNull(sources.deletedAt), sql`${sources.type} IS NOT NULL`))
+        .orderBy(asc(sources.type));
+
+      return result.map((r) => r.type).filter((t): t is string => t !== null);
+    },
+    [],
+    "getSourceTypesDTO",
   );
 });

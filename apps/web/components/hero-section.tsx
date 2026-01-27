@@ -1,7 +1,23 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function HeroSection() {
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (query.trim()) {
+      router.push(`/browse?q=${encodeURIComponent(query.trim())}`);
+    } else {
+      router.push("/browse");
+    }
+  }
+
   return (
     <section className="p-4 relative min-h-[60vh] flex items-center justify-center overflow-hidden border-b border-b-border-dark">
       {/* Looping background video */}
@@ -34,13 +50,21 @@ export function HeroSection() {
           </span>
         </h2>
 
-        <div className="flex gap-2 max-w-md mx-auto mt-8">
+        <form
+          onSubmit={handleSubmit}
+          className="flex gap-2 max-w-md mx-auto mt-8"
+        >
           <Input
+            type="search"
             placeholder="Search sources..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             className="flex-1 text-foreground"
           />
-          <Button variant="default">Search</Button>
-        </div>
+          <Button type="submit" variant="default">
+            Search
+          </Button>
+        </form>
 
         <p className="text-sm mt-6 text-secondary text-shadow-xs">
           The community database for human-made content.

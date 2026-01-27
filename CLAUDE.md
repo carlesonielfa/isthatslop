@@ -80,6 +80,7 @@ The web app follows the [Next.js Data Access Layer pattern](https://nextjs.org/d
 - Functions are wrapped with React `cache()` for request deduplication
 - Return DTOs (Data Transfer Objects) with only safe-to-expose fields
 - Database queries and sensitive logic stay server-side
+- **Do NOT create API routes** (`/api/*`) for data that can be fetched directly in Server Components via the DAL. API routes are only needed for external consumers (e.g., browser extension).
 
 ## UI Components
 

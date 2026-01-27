@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "test": "turbo run test",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
@@ -14,9 +15,16 @@
     "db:seed": "bun -F @repo/database db:seed"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@vitejs/plugin-react": "^5.1.2",
+    "jsdom": "^27.4.0",
     "prettier": "^3.7.4",
     "turbo": "^2.7.5",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vite-tsconfig-paths": "^6.0.5",
+    "vitest": "^4.0.18",
+    "web": "workspace:*"
   },
   "engines": {
     "node": ">=18"
