@@ -100,15 +100,15 @@ function DesktopNav() {
       <Button variant="ghost" size="sm" asChild>
         <Link href="/">Home</Link>
       </Button>
-      <span className="text-muted-foreground">|</span>
+      <span>|</span>
       <Button variant="ghost" size="sm" asChild>
         <Link href="/browse">Browse</Link>
       </Button>
-      <span className="text-muted-foreground">|</span>
+      <span>|</span>
       <Button variant="ghost" size="sm" asChild>
         <Link href="/hall-of-fame">Hall of Fame</Link>
       </Button>
-      <span className="text-muted-foreground">|</span>
+      <span>|</span>
       <Button variant="ghost" size="sm" asChild>
         <Link href="/hall-of-shame">Hall of Shame</Link>
       </Button>

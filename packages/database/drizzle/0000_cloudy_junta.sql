@@ -14,6 +14,50 @@ CREATE TABLE "account" (
 	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "claim_comments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"claim_id" uuid NOT NULL,
+	"user_id" text NOT NULL,
+	"content" text NOT NULL,
+	"is_dispute" boolean DEFAULT false NOT NULL,
+	"helpful_votes" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"deleted_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE "claim_evidence" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"claim_id" uuid NOT NULL,
+	"url" text NOT NULL,
+	"caption" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "claim_votes" (
+	"claim_id" uuid NOT NULL,
+	"user_id" text NOT NULL,
+	"is_helpful" boolean NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "claim_votes_claim_id_user_id_pk" PRIMARY KEY("claim_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "claims" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"source_id" uuid NOT NULL,
+	"user_id" text NOT NULL,
+	"content" text NOT NULL,
+	"impact" integer NOT NULL,
+	"confidence" integer NOT NULL,
+	"helpful_votes" integer DEFAULT 0 NOT NULL,
+	"not_helpful_votes" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"deleted_at" timestamp,
+	CONSTRAINT "claims_impact_range" CHECK ("claims"."impact" >= 1 AND "claims"."impact" <= 5),
+	CONSTRAINT "claims_confidence_range" CHECK ("claims"."confidence" >= 1 AND "claims"."confidence" <= 5)
+);
+--> statement-breakpoint
 CREATE TABLE "flags" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"target_type" text NOT NULL,
@@ -36,36 +80,6 @@ CREATE TABLE "moderation_logs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "review_evidence" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"review_id" uuid NOT NULL,
-	"url" text NOT NULL,
-	"caption" text,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "review_votes" (
-	"review_id" uuid NOT NULL,
-	"user_id" text NOT NULL,
-	"is_helpful" boolean NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "review_votes_review_id_user_id_pk" PRIMARY KEY("review_id","user_id")
-);
---> statement-breakpoint
-CREATE TABLE "reviews" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"source_id" uuid NOT NULL,
-	"user_id" text NOT NULL,
-	"tier" integer NOT NULL,
-	"content" text NOT NULL,
-	"helpful_votes" integer DEFAULT 0 NOT NULL,
-	"not_helpful_votes" integer DEFAULT 0 NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"deleted_at" timestamp,
-	CONSTRAINT "reviews_tier_range" CHECK ("reviews"."tier" >= 0 AND "reviews"."tier" <= 6)
-);
---> statement-breakpoint
 CREATE TABLE "session" (
 	"id" text PRIMARY KEY NOT NULL,
 	"expires_at" timestamp NOT NULL,
@@ -80,9 +94,10 @@ CREATE TABLE "session" (
 --> statement-breakpoint
 CREATE TABLE "source_score_cache" (
 	"source_id" uuid PRIMARY KEY NOT NULL,
-	"tier" numeric(2, 1),
-	"review_count" integer DEFAULT 0 NOT NULL,
-	"tier_distribution" jsonb,
+	"tier" integer,
+	"raw_score" numeric(10, 2),
+	"normalized_score" numeric(10, 2),
+	"claim_count" integer DEFAULT 0 NOT NULL,
 	"last_calculated_at" timestamp,
 	"recalculation_requested_at" timestamp
 );
@@ -97,6 +112,9 @@ CREATE TABLE "sources" (
 	"parent_id" uuid,
 	"path" text NOT NULL,
 	"depth" integer DEFAULT 0 NOT NULL,
+	"official_ai_policy" text,
+	"official_ai_policy_url" text,
+	"official_ai_policy_updated_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"created_by_user_id" text NOT NULL,
@@ -111,13 +129,15 @@ CREATE TABLE "user" (
 	"email_verified" boolean DEFAULT false NOT NULL,
 	"image" text,
 	"username" text,
+	"display_username" text,
 	"avatar_url" text,
 	"reputation" integer DEFAULT 0 NOT NULL,
 	"role" text DEFAULT 'member' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "user_email_unique" UNIQUE("email"),
-	CONSTRAINT "user_username_unique" UNIQUE("username")
+	CONSTRAINT "user_username_unique" UNIQUE("username"),
+	CONSTRAINT "user_display_username_unique" UNIQUE("display_username")
 );
 --> statement-breakpoint
 CREATE TABLE "verification" (
@@ -130,30 +150,34 @@ CREATE TABLE "verification" (
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "claim_comments" ADD CONSTRAINT "claim_comments_claim_id_claims_id_fk" FOREIGN KEY ("claim_id") REFERENCES "public"."claims"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "claim_comments" ADD CONSTRAINT "claim_comments_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "claim_evidence" ADD CONSTRAINT "claim_evidence_claim_id_claims_id_fk" FOREIGN KEY ("claim_id") REFERENCES "public"."claims"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "claim_votes" ADD CONSTRAINT "claim_votes_claim_id_claims_id_fk" FOREIGN KEY ("claim_id") REFERENCES "public"."claims"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "claim_votes" ADD CONSTRAINT "claim_votes_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "claims" ADD CONSTRAINT "claims_source_id_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."sources"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "claims" ADD CONSTRAINT "claims_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "flags" ADD CONSTRAINT "flags_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "flags" ADD CONSTRAINT "flags_resolved_by_user_id_user_id_fk" FOREIGN KEY ("resolved_by_user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "moderation_logs" ADD CONSTRAINT "moderation_logs_moderator_id_user_id_fk" FOREIGN KEY ("moderator_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_evidence" ADD CONSTRAINT "review_evidence_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_votes" ADD CONSTRAINT "review_votes_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_votes" ADD CONSTRAINT "review_votes_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_source_id_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."sources"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "source_score_cache" ADD CONSTRAINT "source_score_cache_source_id_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."sources"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sources" ADD CONSTRAINT "sources_parent_id_sources_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."sources"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sources" ADD CONSTRAINT "sources_created_by_user_id_user_id_fk" FOREIGN KEY ("created_by_user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "account_userId_idx" ON "account" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "claim_comments_claim_idx" ON "claim_comments" USING btree ("claim_id");--> statement-breakpoint
+CREATE INDEX "claim_comments_user_idx" ON "claim_comments" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "claim_evidence_claim_idx" ON "claim_evidence" USING btree ("claim_id");--> statement-breakpoint
+CREATE INDEX "claim_votes_claim_idx" ON "claim_votes" USING btree ("claim_id");--> statement-breakpoint
+CREATE INDEX "claims_source_idx" ON "claims" USING btree ("source_id");--> statement-breakpoint
+CREATE INDEX "claims_user_idx" ON "claims" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "claims_created_idx" ON "claims" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "claims_active_idx" ON "claims" USING btree ("source_id","created_at") WHERE "claims"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "flags_pending_idx" ON "flags" USING btree ("created_at") WHERE "flags"."status" = 'pending';--> statement-breakpoint
 CREATE INDEX "flags_target_idx" ON "flags" USING btree ("target_type","target_id");--> statement-breakpoint
 CREATE INDEX "moderation_logs_moderator_idx" ON "moderation_logs" USING btree ("moderator_id");--> statement-breakpoint
 CREATE INDEX "moderation_logs_target_idx" ON "moderation_logs" USING btree ("target_type","target_id");--> statement-breakpoint
 CREATE INDEX "moderation_logs_created_idx" ON "moderation_logs" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "review_evidence_review_idx" ON "review_evidence" USING btree ("review_id");--> statement-breakpoint
-CREATE INDEX "review_votes_review_idx" ON "review_votes" USING btree ("review_id");--> statement-breakpoint
-CREATE INDEX "reviews_source_idx" ON "reviews" USING btree ("source_id");--> statement-breakpoint
-CREATE INDEX "reviews_user_idx" ON "reviews" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "reviews_created_idx" ON "reviews" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "reviews_active_idx" ON "reviews" USING btree ("source_id","created_at") WHERE "reviews"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "session_userId_idx" ON "session" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "source_score_cache_tier_idx" ON "source_score_cache" USING btree ("tier");--> statement-breakpoint
 CREATE UNIQUE INDEX "sources_parent_slug_idx" ON "sources" USING btree ("parent_id","slug");--> statement-breakpoint

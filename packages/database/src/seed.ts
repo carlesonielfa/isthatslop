@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { Pool } from "pg";
+import { calculateSourceScore } from "@repo/scoring";
 import * as schema from "./schema.js";
 
 // Load .env from monorepo root
@@ -39,9 +40,10 @@ async function seed() {
   console.log("Cleaning existing data...");
   await db.delete(schema.moderationLogs);
   await db.delete(schema.flags);
-  await db.delete(schema.reviewVotes);
-  await db.delete(schema.reviewEvidence);
-  await db.delete(schema.reviews);
+  await db.delete(schema.claimVotes);
+  await db.delete(schema.claimEvidence);
+  await db.delete(schema.claimComments);
+  await db.delete(schema.claims);
   await db.delete(schema.sourceScoreCache);
   await db.delete(schema.sources);
   await db.delete(schema.session);
@@ -181,6 +183,14 @@ async function seed() {
     // Standalone websites (depth 0)
     buzzfeed: crypto.randomUUID(),
     cnet: crypto.randomUUID(),
+
+    // Instagram (depth 0)
+    instagram: crypto.randomUUID(),
+
+    // Instagram users (depth 1)
+    instaPhotographer: crypto.randomUUID(),
+    instaInfluencer: crypto.randomUUID(),
+    instaAIArtist: crypto.randomUUID(),
   };
 
   const sourcesData = [
@@ -402,6 +412,66 @@ async function seed() {
       depth: 1,
       createdByUserId: "user_carol",
     },
+
+    // ==========================================================================
+    // INSTAGRAM (depth 0)
+    // ==========================================================================
+    {
+      id: sourceIds.instagram,
+      slug: "instagram",
+      name: "Instagram",
+      type: "platform",
+      description:
+        "Instagram is a photo and video sharing social networking service owned by Meta. Content ranges from personal photos to professional photography and increasingly AI-generated images.",
+      url: "https://instagram.com",
+      parentId: null,
+      path: sourceIds.instagram,
+      depth: 0,
+      createdByUserId: "user_admin",
+    },
+
+    // ==========================================================================
+    // INSTAGRAM USERS (depth 1)
+    // ==========================================================================
+    {
+      id: sourceIds.instaPhotographer,
+      slug: "naturelens_photo",
+      name: "@naturelens_photo",
+      type: "instagram-user",
+      description:
+        "Professional wildlife and nature photographer sharing authentic field photography from around the world.",
+      url: "https://instagram.com/naturelens_photo",
+      parentId: sourceIds.instagram,
+      path: `${sourceIds.instagram}.${sourceIds.instaPhotographer}`,
+      depth: 1,
+      createdByUserId: "user_trusted",
+    },
+    {
+      id: sourceIds.instaInfluencer,
+      slug: "lifestyle_luxe",
+      name: "@lifestyle_luxe",
+      type: "instagram-user",
+      description:
+        "Lifestyle influencer posting about travel, fashion, and wellness. Known for heavily filtered and edited content.",
+      url: "https://instagram.com/lifestyle_luxe",
+      parentId: sourceIds.instagram,
+      path: `${sourceIds.instagram}.${sourceIds.instaInfluencer}`,
+      depth: 1,
+      createdByUserId: "user_alice",
+    },
+    {
+      id: sourceIds.instaAIArtist,
+      slug: "dreamscape_ai",
+      name: "@dreamscape_ai",
+      type: "instagram-user",
+      description:
+        "Account dedicated to sharing AI-generated surrealist artwork created with Midjourney and Stable Diffusion.",
+      url: "https://instagram.com/dreamscape_ai",
+      parentId: sourceIds.instagram,
+      path: `${sourceIds.instagram}.${sourceIds.instaAIArtist}`,
+      depth: 1,
+      createdByUserId: "user_bob",
+    },
   ];
 
   const sources = await db
@@ -412,12 +482,33 @@ async function seed() {
   console.log(`Created ${sources.length} sources`);
 
   // ---------------------------------------------------------------------------
-  // REVIEWS
+  // CLAIMS
   // ---------------------------------------------------------------------------
-  console.log("Creating reviews...");
+  console.log("Creating claims...");
 
-  const reviewsData = [
-    // Reddit platform reviews
+  const mapTierToClaimAttributes = (tier: number) => {
+    switch (tier) {
+      case 0:
+        return { impact: 1, confidence: 2 };
+      case 1:
+        return { impact: 1, confidence: 3 };
+      case 2:
+        return { impact: 2, confidence: 3 };
+      case 3:
+        return { impact: 3, confidence: 3 };
+      case 4:
+        return { impact: 4, confidence: 4 };
+      case 5:
+        return { impact: 5, confidence: 4 };
+      case 6:
+        return { impact: 5, confidence: 5 };
+      default:
+        return { impact: 3, confidence: 3 };
+    }
+  };
+
+  const rawClaims = [
+    // Reddit platform claims
     {
       sourceId: sourceIds.reddit,
       userId: "user_trusted",
@@ -440,7 +531,7 @@ async function seed() {
         "It really depends on the subreddit. Gaming communities tend to be mostly human-created memes and discussions. Art communities are more mixed. Overall I'd say it's pretty balanced co-creation at the platform level.",
     },
 
-    // r/Art reviews
+    // r/Art claims
     {
       sourceId: sourceIds.rArt,
       userId: "user_alice",
@@ -463,7 +554,7 @@ async function seed() {
         "Mostly human art with occasional AI assistance for things like background elements or initial composition ideas. The community values traditional skills and you can tell the difference between AI slop and genuine art. Good moderation keeps it clean.",
     },
 
-    // r/ChatGPT reviews
+    // r/ChatGPT claims
     {
       sourceId: sourceIds.rChatGPT,
       userId: "user_bob",
@@ -486,7 +577,7 @@ async function seed() {
         "Obviously heavy on AI content since that's the whole point. However, there are thoughtful discussions about AI capabilities and limitations that are human-written. The meta-discussions are human, but the subject matter (shared AI outputs) is pure AI. Splitting the difference here.",
     },
 
-    // BuzzFeed reviews
+    // BuzzFeed claims
     {
       sourceId: sourceIds.buzzfeed,
       userId: "user_alice",
@@ -509,7 +600,7 @@ async function seed() {
         "Mixed bag. Their investigative journalism still seems human-written and quality. But the click-bait listicles and quizzes? Definitely AI-generated with human curation. The editorial pieces are human-guided AI at this point. Overall leans toward AI-generated with human guidance.",
     },
 
-    // CNET reviews
+    // CNET claims
     {
       sourceId: sourceIds.cnet,
       userId: "user_mod",
@@ -525,7 +616,7 @@ async function seed() {
         "After the scandal, CNET has been more careful. Their flagship reviews are clearly human-written with expertise and personality. Some supporting content may use AI for research and drafting, but humans polish it significantly. They've found a good balance.",
     },
 
-    // u/DigitalArtist42 reviews
+    // u/DigitalArtist42 claims
     {
       sourceId: sourceIds.rArtUser1,
       userId: "user_alice",
@@ -541,7 +632,7 @@ async function seed() {
         "Mostly original work. I noticed they mentioned using AI to generate reference poses in one post, but all the actual artwork is clearly hand-painted. That slight AI inspiration drops it from pure artisanal, but the execution is entirely human. Beautiful work.",
     },
 
-    // u/AIArtExplorer reviews
+    // u/AIArtExplorer claims
     {
       sourceId: sourceIds.rArtUser2,
       userId: "user_bob",
@@ -557,7 +648,7 @@ async function seed() {
         "Primarily AI-generated art. To be fair, some posts show they iterate on prompts extensively and do minor post-processing in Photoshop. But the core creative work is all AI. Light editing at best. At least they disclose it, unlike many others.",
     },
 
-    // Medium platform reviews
+    // Medium platform claims
     {
       sourceId: sourceIds.medium,
       userId: "user_trusted",
@@ -573,7 +664,7 @@ async function seed() {
         "The decline in content quality on Medium is noticeable. Many articles now have that ChatGPT structure - comprehensive but shallow, hitting all keywords but lacking genuine insight. Human curation exists through the publications, but the core content is often AI-generated. Heading toward AI-generated with human guidance.",
     },
 
-    // Towards Data Science reviews
+    // Towards Data Science claims
     {
       sourceId: sourceIds.towardsDataScience,
       userId: "user_alice",
@@ -582,7 +673,7 @@ async function seed() {
         "TDS maintains higher standards than general Medium. Technical articles require genuine expertise to write and review. Some authors may use AI for code examples or explanations, but the analysis and insights are human-driven. Editorial oversight is strong. Human-created with AI polish.",
     },
 
-    // YouTube platform reviews
+    // YouTube platform claims
     {
       sourceId: sourceIds.youtube,
       userId: "user_bob",
@@ -591,7 +682,7 @@ async function seed() {
         "YouTube is incredibly varied. You have everything from traditional human creators to AI-generated voice-over channels with stock footage. Gaming content is mostly human, educational content is mixed, and 'faceless' channels are increasingly AI-driven. Platform-wide, it's genuine co-creation territory.",
     },
 
-    // Tech Explained channel reviews
+    // Tech Explained channel claims
     {
       sourceId: sourceIds.techChannel,
       userId: "user_carol",
@@ -599,29 +690,129 @@ async function seed() {
       content:
         "This channel features a real person doing genuine reviews. You can tell from the hands-on testing and personal opinions. They might use AI for script outlines or research, but the content delivery and insights are clearly human. Polish is AI-assisted, creation is human.",
     },
+
+    // Instagram platform claims
+    {
+      sourceId: sourceIds.instagram,
+      userId: "user_trusted",
+      tier: 3,
+      content:
+        "Instagram is a mixed bag these days. Traditional photographers and artists still post genuine work, but there's been an explosion of AI-generated content, especially in the art and fashion spaces. The platform doesn't require AI disclosure, making it hard to tell what's real. Overall it's genuine co-creation territory.",
+    },
+    {
+      sourceId: sourceIds.instagram,
+      userId: "user_alice",
+      tier: 4,
+      content:
+        "I've noticed a huge increase in AI-generated images on Instagram. Many 'photographers' are now posting AI art without disclosure. The influencer space is particularly bad - AI-enhanced photos, AI-written captions, AI-generated lifestyle content. Human curation exists but AI does the heavy lifting now.",
+    },
+    {
+      sourceId: sourceIds.instagram,
+      userId: "user_bob",
+      tier: 3,
+      content:
+        "Depends heavily on who you follow. Food bloggers and travel photographers tend to be authentic. Art accounts are increasingly AI. The algorithm seems to favor AI content because it's optimized for engagement. Platform-wide, I'd say it's balanced co-creation.",
+    },
+
+    // @naturelens_photo claims
+    {
+      sourceId: sourceIds.instaPhotographer,
+      userId: "user_alice",
+      tier: 0,
+      content:
+        "This is a legitimate wildlife photographer. You can see the EXIF data in their posts, they share behind-the-scenes of their shoots, and the images have that authentic quality you only get from real field photography. Pure artisanal human work.",
+    },
+    {
+      sourceId: sourceIds.instaPhotographer,
+      userId: "user_carol",
+      tier: 1,
+      content:
+        "Genuine photography work. They do use Lightroom for post-processing and occasionally AI-powered noise reduction, but the core images are real photographs taken in the field. Minimal AI involvement - just standard photo editing tools.",
+    },
+    {
+      sourceId: sourceIds.instaPhotographer,
+      userId: "user_trusted",
+      tier: 0,
+      content:
+        "One of the few authentic accounts left. Real camera work, real locations, real wildlife encounters. They've posted videos of their shoots proving the authenticity. No AI generation here, just skilled photography.",
+    },
+
+    // @lifestyle_luxe claims
+    {
+      sourceId: sourceIds.instaInfluencer,
+      userId: "user_bob",
+      tier: 4,
+      content:
+        "Classic influencer account with heavy AI involvement. Captions are clearly ChatGPT-written, photos are heavily processed with AI enhancement tools, and some 'travel' photos look suspiciously like AI composites. Human guidance, but AI-generated content.",
+    },
+    {
+      sourceId: sourceIds.instaInfluencer,
+      userId: "user_trusted",
+      tier: 3,
+      content:
+        "Mixed content. The person is real and does travel, but the photos are heavily edited with AI tools. Captions show signs of AI writing but with personal touches. It's collaborative - human experiences processed through AI enhancement.",
+    },
+    {
+      sourceId: sourceIds.instaInfluencer,
+      userId: "user_carol",
+      tier: 4,
+      content:
+        "Heavy AI polish on everything. Face tuning, background enhancement, AI-written captions with that characteristic ChatGPT style. The human is there providing direction and appearing in photos, but AI does most of the actual content creation.",
+    },
+
+    // @dreamscape_ai claims
+    {
+      sourceId: sourceIds.instaAIArtist,
+      userId: "user_alice",
+      tier: 6,
+      content:
+        "Pure AI slop. They're upfront about it at least - all Midjourney and Stable Diffusion outputs. The human involvement is just typing prompts and selecting which outputs to post. No artistic skill required beyond prompt engineering.",
+    },
+    {
+      sourceId: sourceIds.instaAIArtist,
+      userId: "user_bob",
+      tier: 6,
+      content:
+        "Entirely AI-generated artwork. They do share their prompts which is nice for transparency, but there's zero human artistic input. Just AI image generation posted directly to Instagram. Textbook AI slop.",
+    },
+    {
+      sourceId: sourceIds.instaAIArtist,
+      userId: "user_mod",
+      tier: 5,
+      content:
+        "Mostly AI-generated, but I'll give some credit - they do iterate on prompts extensively and occasionally do minor touch-ups in Photoshop. Still, the creative work is 95% AI. At least they're honest about the source, unlike many others.",
+    },
   ];
 
-  const reviews = await db
-    .insert(schema.reviews)
-    .values(reviewsData)
-    .returning();
+  const claimsData = rawClaims.map(({ tier, ...claim }) => ({
+    ...claim,
+    ...mapTierToClaimAttributes(tier),
+  }));
 
-  console.log(`Created ${reviews.length} reviews`);
+  const claims = await db.insert(schema.claims).values(claimsData).returning({
+    id: schema.claims.id,
+    userId: schema.claims.userId,
+    sourceId: schema.claims.sourceId,
+    impact: schema.claims.impact,
+    confidence: schema.claims.confidence,
+  });
+
+  console.log(`Created ${claims.length} claims`);
 
   // ---------------------------------------------------------------------------
-  // REVIEW VOTES
+  // CLAIM VOTES
   // ---------------------------------------------------------------------------
-  console.log("Creating review votes...");
+  console.log("Creating claim votes...");
 
   const votesData: {
-    reviewId: string;
+    claimId: string;
     userId: string;
     isHelpful: boolean;
   }[] = [];
 
   // Add some realistic voting patterns
-  reviews.forEach((review, index) => {
-    // Each review gets 1-4 votes
+  claims.forEach((claim, index) => {
+    // Each claim gets 1-4 votes
     const voterPool = [
       "user_admin",
       "user_mod",
@@ -629,14 +820,14 @@ async function seed() {
       "user_alice",
       "user_bob",
       "user_carol",
-    ].filter((id) => id !== review.userId);
+    ].filter((id) => id !== claim.userId);
 
     const numVotes = Math.min(voterPool.length, ((index % 4) + 1) as number);
     const selectedVoters = voterPool.slice(0, numVotes);
 
     selectedVoters.forEach((voterId, vIndex) => {
       votesData.push({
-        reviewId: review.id,
+        claimId: claim.id,
         userId: voterId,
         isHelpful: vIndex % 3 !== 0, // ~66% helpful votes
       });
@@ -644,10 +835,10 @@ async function seed() {
   });
 
   if (votesData.length > 0) {
-    await db.insert(schema.reviewVotes).values(votesData);
+    await db.insert(schema.claimVotes).values(votesData);
   }
 
-  console.log(`Created ${votesData.length} review votes`);
+  console.log(`Created ${votesData.length} claim votes`);
 
   // ---------------------------------------------------------------------------
   // UPDATE HELPFUL VOTE COUNTS
@@ -655,15 +846,15 @@ async function seed() {
   console.log("Updating helpful vote counts...");
 
   await db.execute(sql`
-    UPDATE reviews r
+    UPDATE claims c
     SET
       helpful_votes = (
-        SELECT COUNT(*) FROM review_votes rv
-        WHERE rv.review_id = r.id AND rv.is_helpful = true
+        SELECT COUNT(*) FROM claim_votes cv
+        WHERE cv.claim_id = c.id AND cv.is_helpful = true
       ),
       not_helpful_votes = (
-        SELECT COUNT(*) FROM review_votes rv
-        WHERE rv.review_id = r.id AND rv.is_helpful = false
+        SELECT COUNT(*) FROM claim_votes cv
+        WHERE cv.claim_id = c.id AND cv.is_helpful = false
       )
   `);
 
@@ -672,48 +863,44 @@ async function seed() {
   // ---------------------------------------------------------------------------
   console.log("Creating source score cache...");
 
-  // Calculate tier distribution and scores for each source
+  const voteCounts = new Map<string, { helpful: number; notHelpful: number }>();
+  votesData.forEach((vote) => {
+    const current = voteCounts.get(vote.claimId) ?? {
+      helpful: 0,
+      notHelpful: 0,
+    };
+    if (vote.isHelpful) current.helpful += 1;
+    else current.notHelpful += 1;
+    voteCounts.set(vote.claimId, current);
+  });
+
   const scoreCacheData: {
     sourceId: string;
-    tier: string;
-    reviewCount: number;
-    tierDistribution: Record<number, number>;
+    tier: number;
+    rawScore: string;
+    normalizedScore: string;
+    claimCount: number;
   }[] = [];
 
   for (const source of sources) {
-    const sourceReviews = reviews.filter((r) => r.sourceId === source.id);
+    const sourceClaims = claims
+      .filter((claim) => claim.sourceId === source.id)
+      .map((claim) => ({
+        impact: claim.impact,
+        confidence: claim.confidence,
+        helpfulVotes: voteCounts.get(claim.id)?.helpful ?? 0,
+      }));
 
-    if (sourceReviews.length === 0) continue;
+    if (sourceClaims.length === 0) continue;
 
-    // Calculate tier distribution
-    const tierDist: Record<number, number> = {
-      0: 0,
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-      6: 0,
-    };
-    sourceReviews.forEach((r) => {
-      tierDist[r.tier] = (tierDist[r.tier] || 0) + 1;
-    });
-
-    // Find mode (most common tier)
-    let modeTier = 0;
-    let maxCount = 0;
-    Object.entries(tierDist).forEach(([tier, count]) => {
-      if (count > maxCount) {
-        maxCount = count;
-        modeTier = parseInt(tier);
-      }
-    });
+    const score = calculateSourceScore(sourceClaims);
 
     scoreCacheData.push({
       sourceId: source.id,
-      tier: modeTier.toString(),
-      reviewCount: sourceReviews.length,
-      tierDistribution: tierDist,
+      tier: score.tier,
+      rawScore: score.rawScore.toFixed(2),
+      normalizedScore: score.normalizedScore.toFixed(2),
+      claimCount: score.claimCount,
     });
   }
 
@@ -736,8 +923,8 @@ async function seed() {
   console.log("========================================");
   console.log(`Users: ${users.length}`);
   console.log(`Sources: ${sources.length}`);
-  console.log(`Reviews: ${reviews.length}`);
-  console.log(`Review Votes: ${votesData.length}`);
+  console.log(`Claims: ${claims.length}`);
+  console.log(`Claim Votes: ${votesData.length}`);
   console.log(`Score Cache Entries: ${scoreCacheData.length}`);
   console.log("========================================\n");
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HeroSection } from "@/components/hero-section";
+import { TierBadge } from "@/components/tier-badge";
 import {
   tiers,
   getRecentSourcesDTO,
@@ -19,33 +21,29 @@ import {
   type SourceCompactDTO,
 } from "@/data/sources";
 
-function TierBadge({ tier }: { tier: number }) {
-  const tierInfo = tiers[tier];
-  return (
-    <span
-      className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 font-bold text-white text-xs"
-      style={{ backgroundColor: tierInfo?.color }}
-      title={tierInfo?.name}
-    >
-      {tier}
-    </span>
-  );
-}
+const tierDescriptions: Record<number, string> = {
+  0: "No credible claims, or all claims dismissed",
+  1: "Minor cosmetic AI usage or low impact claims only",
+  2: "Significant AI claims with mid-high impact, moderate confidence",
+  3: "Strong evidence of substantial AI with high impact",
+  4: "Pervasive AI usage with high confidence",
+};
 
 function SourceRankItem({ source }: { source: SourceDTO }) {
   return (
     <div className="flex items-center gap-2 py-1.5 border-b border-border-dark/30 last:border-b-0">
       <span className="w-5 text-right text-xs">{source.rank}.</span>
-      <TierBadge tier={source.tier} />
+      <TierBadge tier={source.tier} size="sm" />
       <div className="flex-1 min-w-0">
-        <a href="#" className="text-accent hover:underline font-medium">
+        <Link
+          href={`/sources/${source.id}/${source.slug}`}
+          className="text-accent hover:underline font-medium"
+        >
           {source.name}
-        </a>
+        </Link>
         <span className="text-xs ml-1">({source.type})</span>
       </div>
-      <span className="text-xs whitespace-nowrap">
-        {source.reviews} reviews
-      </span>
+      <span className="text-xs whitespace-nowrap">{source.claims} claims</span>
     </div>
   );
 }
@@ -53,11 +51,14 @@ function SourceRankItem({ source }: { source: SourceDTO }) {
 function SourceRankItemCompact({ source }: { source: SourceCompactDTO }) {
   return (
     <div className="flex items-center gap-2 py-1">
-      <TierBadge tier={source.tier} />
-      <a href="#" className="text-accent hover:underline text-xs flex-1">
+      <TierBadge tier={source.tier} size="sm" />
+      <Link
+        href={`/sources/${source.id}/${source.slug}`}
+        className="text-accent hover:underline text-xs flex-1"
+      >
         {source.name}
-      </a>
-      <span className="text-muted-foreground text-xs">{source.reviews}</span>
+      </Link>
+      <span className="text-muted-foreground text-xs">{source.claims}</span>
     </div>
   );
 }
@@ -78,13 +79,18 @@ export default async function HomePage() {
       <div className="max-w-6xl mx-auto px-4 py-4">
         {/* Tier Legend Card */}
         <Card className="mb-4">
-          <CardTitleBar>Slop Tier Guide</CardTitleBar>
+          <CardTitleBar>Tier Guide</CardTitleBar>
           <CardContent className="py-4">
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <div className="flex flex-nowrap justify-between gap-3">
               {tiers.map((t) => (
-                <div key={t.tier} className="flex items-center gap-1.5">
-                  <TierBadge tier={t.tier} />
-                  <span className="text-xs">{t.name}</span>
+                <div
+                  key={t.tier}
+                  className="flex flex-1 min-w-0 flex-col items-center text-center"
+                >
+                  <TierBadge tier={t.tier} size="sm" />
+                  <span className="text-2xs text-muted-foreground mt-1">
+                    {tierDescriptions[t.tier]}
+                  </span>
                 </div>
               ))}
             </div>
@@ -139,9 +145,9 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <div className="text-xl font-bold text-accent">
-                      {stats.reviews.toLocaleString()}
+                      {stats.claims.toLocaleString()}
                     </div>
-                    <div className="text-xs text-muted-foreground">Reviews</div>
+                    <div className="text-xs text-muted-foreground">Claims</div>
                   </div>
                   <div>
                     <div className="text-xl font-bold text-accent">
@@ -161,13 +167,13 @@ export default async function HomePage() {
             <Card size="sm">
               <CardTitleBar>Quick Actions</CardTitleBar>
               <CardContent className="py-3 space-y-2">
-                <Button className="w-full" size="sm">
-                  + Add New Source
+                <Button className="w-full" size="sm" asChild>
+                  <Link href="/claims/new">+ Submit Claim</Link>
                 </Button>
-                <Button className="w-full" size="sm">
-                  Submit Review
+                <Button className="w-full" size="sm" asChild>
+                  <Link href="/browse">Browse Sources</Link>
                 </Button>
-                <Button className="w-full" size="sm">
+                <Button className="w-full" size="sm" disabled>
                   Get Browser Extension
                 </Button>
               </CardContent>

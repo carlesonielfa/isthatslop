@@ -8,7 +8,6 @@ import {
   uuid,
   integer,
   numeric,
-  jsonb,
   primaryKey,
   uniqueIndex,
   check,
@@ -135,6 +134,10 @@ export const sources = pgTable(
     }),
     path: text("path").notNull(), // Materialized path: "uuid1.uuid2.uuid3"
     depth: integer("depth").default(0).notNull(), // 0 = root, max 5
+    // Official AI policy fields
+    officialAiPolicy: text("official_ai_policy"), // Official AI usage policy text
+    officialAiPolicyUrl: text("official_ai_policy_url"), // Link to policy source
+    officialAiPolicyUpdatedAt: timestamp("official_ai_policy_updated_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -167,10 +170,10 @@ export const sourceScoreCache = pgTable(
     sourceId: uuid("source_id")
       .primaryKey()
       .references(() => sources.id, { onDelete: "cascade" }),
-    tier: numeric("tier", { precision: 2, scale: 1 }), // 0-6 scale
-    reviewCount: integer("review_count").default(0).notNull(),
-    tierDistribution:
-      jsonb("tier_distribution").$type<Record<number, number>>(), // {0: count, 1: count, ..., 6: count}
+    tier: integer("tier"), // 0-4 scale (calculated from claims)
+    rawScore: numeric("raw_score", { precision: 10, scale: 2 }), // Sum of claim weights
+    normalizedScore: numeric("normalized_score", { precision: 10, scale: 2 }), // Score after normalization
+    claimCount: integer("claim_count").default(0).notNull(),
     lastCalculatedAt: timestamp("last_calculated_at"),
     recalculationRequestedAt: timestamp("recalculation_requested_at"),
   },
@@ -178,11 +181,11 @@ export const sourceScoreCache = pgTable(
 );
 
 // =============================================================================
-// REVIEWS TABLE
+// CLAIMS TABLE (Users submit claims of AI usage with impact and confidence)
 // =============================================================================
 
-export const reviews = pgTable(
-  "reviews",
+export const claims = pgTable(
+  "claims",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     sourceId: uuid("source_id")
@@ -191,8 +194,9 @@ export const reviews = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id),
-    tier: integer("tier").notNull(), // 0-6 scale (Pure Artisanal to Pure AI Slop)
-    content: text("content").notNull(),
+    content: text("content").notNull(), // Description of AI usage found (100-2000 chars)
+    impact: integer("impact").notNull(), // 1-5 scale: Cosmetic to Pervasive
+    confidence: integer("confidence").notNull(), // 1-5 scale: Speculative to Confirmed
     helpfulVotes: integer("helpful_votes").default(0).notNull(),
     notHelpfulVotes: integer("not_helpful_votes").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -203,53 +207,90 @@ export const reviews = pgTable(
     deletedAt: timestamp("deleted_at"), // Soft delete for audit trail
   },
   (table) => [
-    index("reviews_source_idx").on(table.sourceId),
-    index("reviews_user_idx").on(table.userId),
-    index("reviews_created_idx").on(table.createdAt),
-    index("reviews_active_idx")
+    index("claims_source_idx").on(table.sourceId),
+    index("claims_user_idx").on(table.userId),
+    index("claims_created_idx").on(table.createdAt),
+    index("claims_active_idx")
       .on(table.sourceId, table.createdAt)
       .where(sql`${table.deletedAt} IS NULL`),
-    check("reviews_tier_range", sql`${table.tier} >= 0 AND ${table.tier} <= 6`),
+    check(
+      "claims_impact_range",
+      sql`${table.impact} >= 1 AND ${table.impact} <= 5`,
+    ),
+    check(
+      "claims_confidence_range",
+      sql`${table.confidence} >= 1 AND ${table.confidence} <= 5`,
+    ),
   ],
 );
 
 // =============================================================================
-// REVIEW EVIDENCE TABLE
+// CLAIM EVIDENCE TABLE
 // =============================================================================
 
-export const reviewEvidence = pgTable(
-  "review_evidence",
+export const claimEvidence = pgTable(
+  "claim_evidence",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    reviewId: uuid("review_id")
+    claimId: uuid("claim_id")
       .notNull()
-      .references(() => reviews.id, { onDelete: "cascade" }),
+      .references(() => claims.id, { onDelete: "cascade" }),
     url: text("url").notNull(), // Backblaze B2 URL or external link
     caption: text("caption"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("review_evidence_review_idx").on(table.reviewId)],
+  (table) => [index("claim_evidence_claim_idx").on(table.claimId)],
 );
 
 // =============================================================================
-// REVIEW VOTES TABLE (Composite Primary Key)
+// CLAIM VOTES TABLE (Composite Primary Key)
 // =============================================================================
 
-export const reviewVotes = pgTable(
-  "review_votes",
+export const claimVotes = pgTable(
+  "claim_votes",
   {
-    reviewId: uuid("review_id")
+    claimId: uuid("claim_id")
       .notNull()
-      .references(() => reviews.id, { onDelete: "cascade" }),
+      .references(() => claims.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    isHelpful: boolean("is_helpful").notNull(), // true = helpful, false = not helpful
+    isHelpful: boolean("is_helpful").notNull(), // true = helpful (agree), false = not helpful (disagree)
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.reviewId, table.userId] }),
-    index("review_votes_review_idx").on(table.reviewId),
+    primaryKey({ columns: [table.claimId, table.userId] }),
+    index("claim_votes_claim_idx").on(table.claimId),
+  ],
+);
+
+// =============================================================================
+// CLAIM COMMENTS TABLE (includes dispute functionality)
+// =============================================================================
+
+export const claimComments = pgTable(
+  "claim_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    claimId: uuid("claim_id")
+      .notNull()
+      .references(() => claims.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    content: text("content").notNull(), // Comment text (10-1000 chars)
+    isDispute: boolean("is_dispute").default(false).notNull(), // true = formal dispute of the claim
+    helpfulVotes: integer("helpful_votes").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    deletedAt: timestamp("deleted_at"),
+  },
+  (table) => [
+    index("claim_comments_claim_idx").on(table.claimId),
+    index("claim_comments_user_idx").on(table.userId),
   ],
 );
 
@@ -261,7 +302,7 @@ export const flags = pgTable(
   "flags",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    targetType: text("target_type").notNull(), // "review", "source"
+    targetType: text("target_type").notNull(), // "claim", "source", "comment"
     targetId: uuid("target_id").notNull(),
     userId: text("user_id")
       .notNull()
@@ -292,7 +333,7 @@ export const moderationLogs = pgTable(
       .notNull()
       .references(() => user.id),
     action: text("action").notNull(), // "approve", "reject", "ban", "remove", etc.
-    targetType: text("target_type").notNull(), // "source", "review", "user"
+    targetType: text("target_type").notNull(), // "source", "claim", "user", "comment"
     targetId: uuid("target_id").notNull(),
     reason: text("reason"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -323,7 +364,7 @@ export const sourcesRelations = relations(sources, ({ one, many }) => ({
     fields: [sources.id],
     references: [sourceScoreCache.sourceId],
   }),
-  reviews: many(reviews),
+  claims: many(claims),
 }));
 
 export const sourceScoreCacheRelations = relations(
@@ -336,33 +377,45 @@ export const sourceScoreCacheRelations = relations(
   }),
 );
 
-export const reviewsRelations = relations(reviews, ({ one, many }) => ({
+export const claimsRelations = relations(claims, ({ one, many }) => ({
   source: one(sources, {
-    fields: [reviews.sourceId],
+    fields: [claims.sourceId],
     references: [sources.id],
   }),
   user: one(user, {
-    fields: [reviews.userId],
+    fields: [claims.userId],
     references: [user.id],
   }),
-  evidence: many(reviewEvidence),
-  votes: many(reviewVotes),
+  evidence: many(claimEvidence),
+  votes: many(claimVotes),
+  comments: many(claimComments),
 }));
 
-export const reviewEvidenceRelations = relations(reviewEvidence, ({ one }) => ({
-  review: one(reviews, {
-    fields: [reviewEvidence.reviewId],
-    references: [reviews.id],
+export const claimEvidenceRelations = relations(claimEvidence, ({ one }) => ({
+  claim: one(claims, {
+    fields: [claimEvidence.claimId],
+    references: [claims.id],
   }),
 }));
 
-export const reviewVotesRelations = relations(reviewVotes, ({ one }) => ({
-  review: one(reviews, {
-    fields: [reviewVotes.reviewId],
-    references: [reviews.id],
+export const claimVotesRelations = relations(claimVotes, ({ one }) => ({
+  claim: one(claims, {
+    fields: [claimVotes.claimId],
+    references: [claims.id],
   }),
   user: one(user, {
-    fields: [reviewVotes.userId],
+    fields: [claimVotes.userId],
+    references: [user.id],
+  }),
+}));
+
+export const claimCommentsRelations = relations(claimComments, ({ one }) => ({
+  claim: one(claims, {
+    fields: [claimComments.claimId],
+    references: [claims.id],
+  }),
+  user: one(user, {
+    fields: [claimComments.userId],
     references: [user.id],
   }),
 }));
@@ -392,8 +445,9 @@ export const extendedUserRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   createdSources: many(sources),
-  reviews: many(reviews),
-  reviewVotes: many(reviewVotes),
+  claims: many(claims),
+  claimVotes: many(claimVotes),
+  claimComments: many(claimComments),
   flags: many(flags, { relationName: "flagger" }),
   resolvedFlags: many(flags, { relationName: "resolver" }),
   moderationLogs: many(moderationLogs),

@@ -4,9 +4,9 @@ import { cache } from "react";
 import {
   db,
   user,
-  reviews,
+  claims,
   sources,
-  reviewVotes,
+  claimVotes,
   sourceScoreCache,
 } from "@repo/database";
 import { eq, count, desc, isNull, and, sql } from "drizzle-orm";
@@ -40,18 +40,20 @@ export interface UserProfileDTO {
   role: string;
   joinedAt: string;
   stats: {
-    reviewsCount: number;
+    claimsCount: number;
     sourcesAdded: number;
     helpfulVotes: number;
   };
 }
 
-export interface UserReviewDTO {
+export interface UserClaimDTO {
   id: string;
   sourceId: string;
   sourceName: string;
   sourceType: string | null;
-  tier: number;
+  sourceSlug: string;
+  impact: number;
+  confidence: number;
   content: string;
   helpfulVotes: number;
   notHelpfulVotes: number;
@@ -65,12 +67,12 @@ export interface UserSourceDTO {
   slug: string;
   type: string | null;
   tier: number | null;
-  reviewCount: number;
+  claimCount: number;
   createdAt: string;
 }
 
 export interface UserStatsDTO {
-  reviewsCount: number;
+  claimsCount: number;
   sourcesAdded: number;
   helpfulVotesReceived: number;
   votesGiven: number;
@@ -107,13 +109,13 @@ export const getUserByUsernameDTO = cache(
         }
 
         // Get user stats
-        const [reviewsResult, sourcesResult, helpfulVotesResult] =
+        const [claimsResult, sourcesResult, helpfulVotesResult] =
           await Promise.all([
             db
               .select({ count: count() })
-              .from(reviews)
+              .from(claims)
               .where(
-                and(eq(reviews.userId, userData.id), isNull(reviews.deletedAt)),
+                and(eq(claims.userId, userData.id), isNull(claims.deletedAt)),
               ),
             db
               .select({ count: count() })
@@ -126,14 +128,13 @@ export const getUserByUsernameDTO = cache(
               ),
             db
               .select({
-                total:
-                  sql<number>`COALESCE(SUM(${reviews.helpfulVotes}), 0)`.as(
-                    "total",
-                  ),
+                total: sql<number>`COALESCE(SUM(${claims.helpfulVotes}), 0)`.as(
+                  "total",
+                ),
               })
-              .from(reviews)
+              .from(claims)
               .where(
-                and(eq(reviews.userId, userData.id), isNull(reviews.deletedAt)),
+                and(eq(claims.userId, userData.id), isNull(claims.deletedAt)),
               ),
           ]);
 
@@ -148,7 +149,7 @@ export const getUserByUsernameDTO = cache(
           role: userData.role,
           joinedAt: userData.createdAt.toISOString(),
           stats: {
-            reviewsCount: reviewsResult[0]?.count ?? 0,
+            claimsCount: claimsResult[0]?.count ?? 0,
             sourcesAdded: sourcesResult[0]?.count ?? 0,
             helpfulVotes: Number(helpfulVotesResult[0]?.total) || 0,
           },
@@ -189,13 +190,13 @@ export const getUserByIdDTO = cache(
         }
 
         // Get user stats
-        const [reviewsResult, sourcesResult, helpfulVotesResult] =
+        const [claimsResult, sourcesResult, helpfulVotesResult] =
           await Promise.all([
             db
               .select({ count: count() })
-              .from(reviews)
+              .from(claims)
               .where(
-                and(eq(reviews.userId, userData.id), isNull(reviews.deletedAt)),
+                and(eq(claims.userId, userData.id), isNull(claims.deletedAt)),
               ),
             db
               .select({ count: count() })
@@ -208,14 +209,13 @@ export const getUserByIdDTO = cache(
               ),
             db
               .select({
-                total:
-                  sql<number>`COALESCE(SUM(${reviews.helpfulVotes}), 0)`.as(
-                    "total",
-                  ),
+                total: sql<number>`COALESCE(SUM(${claims.helpfulVotes}), 0)`.as(
+                  "total",
+                ),
               })
-              .from(reviews)
+              .from(claims)
               .where(
-                and(eq(reviews.userId, userData.id), isNull(reviews.deletedAt)),
+                and(eq(claims.userId, userData.id), isNull(claims.deletedAt)),
               ),
           ]);
 
@@ -230,7 +230,7 @@ export const getUserByIdDTO = cache(
           role: userData.role,
           joinedAt: userData.createdAt.toISOString(),
           stats: {
-            reviewsCount: reviewsResult[0]?.count ?? 0,
+            claimsCount: claimsResult[0]?.count ?? 0,
             sourcesAdded: sourcesResult[0]?.count ?? 0,
             helpfulVotes: Number(helpfulVotesResult[0]?.total) || 0,
           },
@@ -243,29 +243,31 @@ export const getUserByIdDTO = cache(
 );
 
 /**
- * Get user's reviews with source information.
+ * Get user's claims with source information.
  */
-export const getUserReviewsDTO = cache(
-  async (userId: string, limit = 10, offset = 0): Promise<UserReviewDTO[]> => {
+export const getUserClaimsDTO = cache(
+  async (userId: string, limit = 10, offset = 0): Promise<UserClaimDTO[]> => {
     return safeQuery(
       async () => {
         const result = await db
           .select({
-            id: reviews.id,
-            sourceId: reviews.sourceId,
+            id: claims.id,
+            sourceId: claims.sourceId,
             sourceName: sources.name,
             sourceType: sources.type,
-            tier: reviews.tier,
-            content: reviews.content,
-            helpfulVotes: reviews.helpfulVotes,
-            notHelpfulVotes: reviews.notHelpfulVotes,
-            createdAt: reviews.createdAt,
-            updatedAt: reviews.updatedAt,
+            sourceSlug: sources.slug,
+            impact: claims.impact,
+            confidence: claims.confidence,
+            content: claims.content,
+            helpfulVotes: claims.helpfulVotes,
+            notHelpfulVotes: claims.notHelpfulVotes,
+            createdAt: claims.createdAt,
+            updatedAt: claims.updatedAt,
           })
-          .from(reviews)
-          .innerJoin(sources, eq(reviews.sourceId, sources.id))
-          .where(and(eq(reviews.userId, userId), isNull(reviews.deletedAt)))
-          .orderBy(desc(reviews.createdAt))
+          .from(claims)
+          .innerJoin(sources, eq(claims.sourceId, sources.id))
+          .where(and(eq(claims.userId, userId), isNull(claims.deletedAt)))
+          .orderBy(desc(claims.createdAt))
           .limit(limit)
           .offset(offset);
 
@@ -274,7 +276,9 @@ export const getUserReviewsDTO = cache(
           sourceId: row.sourceId,
           sourceName: row.sourceName,
           sourceType: row.sourceType,
-          tier: row.tier,
+          sourceSlug: row.sourceSlug,
+          impact: row.impact,
+          confidence: row.confidence,
           content: row.content,
           helpfulVotes: row.helpfulVotes,
           notHelpfulVotes: row.notHelpfulVotes,
@@ -283,7 +287,7 @@ export const getUserReviewsDTO = cache(
         }));
       },
       [],
-      `getUserReviewsDTO(${userId})`,
+      `getUserClaimsDTO(${userId})`,
     );
   },
 );
@@ -303,7 +307,7 @@ export const getUserSourcesDTO = cache(
             type: sources.type,
             createdAt: sources.createdAt,
             tier: sourceScoreCache.tier,
-            reviewCount: sourceScoreCache.reviewCount,
+            claimCount: sourceScoreCache.claimCount,
           })
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
@@ -320,7 +324,7 @@ export const getUserSourcesDTO = cache(
           slug: row.slug,
           type: row.type,
           tier: row.tier ? Number(row.tier) : null,
-          reviewCount: row.reviewCount ?? 0,
+          claimCount: row.claimCount ?? 0,
           createdAt: row.createdAt.toISOString(),
         }));
       },
@@ -337,14 +341,12 @@ export const getUserStatsDTO = cache(
   async (userId: string): Promise<UserStatsDTO> => {
     return safeQuery(
       async () => {
-        const [reviewsResult, sourcesResult, helpfulVotesResult, votesResult] =
+        const [claimsResult, sourcesResult, helpfulVotesResult, votesResult] =
           await Promise.all([
             db
               .select({ count: count() })
-              .from(reviews)
-              .where(
-                and(eq(reviews.userId, userId), isNull(reviews.deletedAt)),
-              ),
+              .from(claims)
+              .where(and(eq(claims.userId, userId), isNull(claims.deletedAt))),
             db
               .select({ count: count() })
               .from(sources)
@@ -356,30 +358,27 @@ export const getUserStatsDTO = cache(
               ),
             db
               .select({
-                total:
-                  sql<number>`COALESCE(SUM(${reviews.helpfulVotes}), 0)`.as(
-                    "total",
-                  ),
+                total: sql<number>`COALESCE(SUM(${claims.helpfulVotes}), 0)`.as(
+                  "total",
+                ),
               })
-              .from(reviews)
-              .where(
-                and(eq(reviews.userId, userId), isNull(reviews.deletedAt)),
-              ),
+              .from(claims)
+              .where(and(eq(claims.userId, userId), isNull(claims.deletedAt))),
             db
               .select({ count: count() })
-              .from(reviewVotes)
-              .where(eq(reviewVotes.userId, userId)),
+              .from(claimVotes)
+              .where(eq(claimVotes.userId, userId)),
           ]);
 
         return {
-          reviewsCount: reviewsResult[0]?.count ?? 0,
+          claimsCount: claimsResult[0]?.count ?? 0,
           sourcesAdded: sourcesResult[0]?.count ?? 0,
           helpfulVotesReceived: Number(helpfulVotesResult[0]?.total) || 0,
           votesGiven: votesResult[0]?.count ?? 0,
         };
       },
       {
-        reviewsCount: 0,
+        claimsCount: 0,
         sourcesAdded: 0,
         helpfulVotesReceived: 0,
         votesGiven: 0,

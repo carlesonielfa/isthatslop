@@ -59,8 +59,8 @@ export function createMockChildRow(overrides: {
   id: string;
   name: string;
   parentId: string;
-  tier?: string | null;
-  reviewCount?: number;
+  tier?: number | null;
+  claimCount?: number;
   type?: string;
   depth?: number;
 }) {
@@ -71,7 +71,7 @@ export function createMockChildRow(overrides: {
     type: overrides.type ?? "subreddit",
     depth: overrides.depth ?? 1,
     parentId: overrides.parentId,
-    tier: "tier" in overrides ? overrides.tier : "3",
-    reviewCount: overrides.reviewCount ?? 0,
+    tier: "tier" in overrides ? overrides.tier : 3,
+    claimCount: overrides.claimCount ?? 0,
   };
 }

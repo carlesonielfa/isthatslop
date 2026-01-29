@@ -135,7 +135,7 @@ export default function ProfileSetupPage() {
                   disabled={isLoading}
                 />
                 <FieldDescription>
-                  This is how your name will appear on your reviews
+                  This is how your name will appear on your claims
                 </FieldDescription>
               </Field>
 

@@ -16,15 +16,15 @@ describe("getSourceChildrenDTO", () => {
         id: "child-1",
         name: "Child 1",
         parentId: "parent-1",
-        tier: "2",
-        reviewCount: 10,
+        tier: 2,
+        claimCount: 10,
       }),
       createMockChildRow({
         id: "child-2",
         name: "Child 2",
         parentId: "parent-1",
-        tier: "3",
-        reviewCount: 5,
+        tier: 3,
+        claimCount: 5,
       }),
     ];
     setupMockDb(db, [children, []]); // children query, then empty child counts
@@ -37,7 +37,7 @@ describe("getSourceChildrenDTO", () => {
       id: "child-1",
       name: "Child 1",
       tier: 2,
-      reviewCount: 10,
+      claimCount: 10,
       isMatch: true,
     });
   });
@@ -48,7 +48,7 @@ describe("getSourceChildrenDTO", () => {
         id: `child-${i}`,
         name: `Child ${i}`,
         parentId: "parent-1",
-        reviewCount: i,
+        claimCount: i,
       }),
     );
     setupMockDb(db, [children, []]);
@@ -89,22 +89,6 @@ describe("getSourceChildrenDTO", () => {
     const result = await getSourceChildrenDTO("parent-1", 20, 0);
 
     expect(result.children[0]!.tier).toBeNull();
-  });
-
-  it("rounds decimal tier values", async () => {
-    const children = [
-      createMockChildRow({
-        id: "child-1",
-        name: "Child 1",
-        parentId: "parent-1",
-        tier: "2.7",
-      }),
-    ];
-    setupMockDb(db, [children, []]);
-
-    const result = await getSourceChildrenDTO("parent-1", 20, 0);
-
-    expect(result.children[0]!.tier).toBe(3);
   });
 
   it("returns empty children array when no results", async () => {

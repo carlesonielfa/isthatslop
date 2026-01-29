@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1769242649364,
-      "tag": "0000_mute_omega_red",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1769342968930,
-      "tag": "0001_zippy_whirlwind",
+      "when": 1769677995962,
+      "tag": "0000_cloudy_junta",
       "breakpoints": true
     }
   ]

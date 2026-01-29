@@ -4,12 +4,12 @@ import { Card, CardContent, CardTitleBar } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   getUserByUsernameDTO,
-  getUserReviewsDTO,
+  getUserClaimsDTO,
   getUserSourcesDTO,
 } from "@/data/users";
 import { UserAvatar } from "@/components/user-avatar";
 import { ReputationBadge } from "@/components/reputation-badge";
-import { UserReviewCard } from "@/components/user-review-card";
+import { UserClaimCard } from "@/components/user-claim-card";
 import { UserSourceCard } from "@/components/user-source-card";
 import { Separator } from "@/components/ui/separator";
 import { formatMonthYear } from "@/lib/date";
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   return {
     title: `@${user.displayUsername} - IsThatSlop`,
-    description: `View ${user.displayUsername}'s profile on IsThatSlop. ${user.stats.reviewsCount} reviews, ${user.stats.sourcesAdded} sources added.`,
+    description: `View ${user.displayUsername}'s profile on IsThatSlop. ${user.stats.claimsCount} claims, ${user.stats.sourcesAdded} sources added.`,
   };
 }
 
@@ -42,8 +42,8 @@ export default async function UserProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const [reviews, sources] = await Promise.all([
-    getUserReviewsDTO(user.id, 5),
+  const [claims, sources] = await Promise.all([
+    getUserClaimsDTO(user.id, 5),
     getUserSourcesDTO(user.id, 5),
   ]);
 
@@ -95,9 +95,9 @@ export default async function UserProfilePage({ params }: PageProps) {
                 </div>
                 <div className="ring ring-inset p-2">
                   <div className="text-lg font-bold text-accent">
-                    {user.stats.reviewsCount}
+                    {user.stats.claimsCount}
                   </div>
-                  <div className="text-xs text-muted-foreground">Reviews</div>
+                  <div className="text-xs text-muted-foreground">Claims</div>
                 </div>
                 <div className="ring ring-inset p-2">
                   <div className="text-lg font-bold text-accent">
@@ -122,32 +122,30 @@ export default async function UserProfilePage({ params }: PageProps) {
         </CardContent>
       </Card>
 
-      {/* Two column layout for reviews and sources */}
+      {/* Two column layout for claims and sources */}
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Recent Reviews */}
+        {/* Recent Claims */}
         <Card>
-          <CardTitleBar>
-            Recent Reviews ({user.stats.reviewsCount})
-          </CardTitleBar>
+          <CardTitleBar>Recent Claims ({user.stats.claimsCount})</CardTitleBar>
           <CardContent className="space-y-2">
-            {reviews.length === 0 ? (
+            {claims.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">
-                No reviews yet
+                No claims yet
               </p>
             ) : (
               <>
-                {reviews.map((review) => (
-                  <div key={review.id}>
-                    <UserReviewCard review={review} />
+                {claims.map((claim) => (
+                  <div key={claim.id}>
+                    <UserClaimCard claim={claim} />
                     <Separator className="my-2" />
                   </div>
                 ))}
-                {user.stats.reviewsCount > 5 && (
+                {user.stats.claimsCount > 5 && (
                   <Link
-                    href={`/users/${user.username}/reviews`}
+                    href={`/users/${user.username}/claims`}
                     className="text-xs text-accent hover:underline block text-center pt-2"
                   >
-                    View all {user.stats.reviewsCount} reviews...
+                    View all {user.stats.claimsCount} claims...
                   </Link>
                 )}
               </>

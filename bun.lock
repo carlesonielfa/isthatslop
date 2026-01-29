@@ -24,6 +24,7 @@
         "@base-ui/react": "^1.1.0",
         "@phosphor-icons/react": "^2.1.10",
         "@repo/database": "*",
+        "@repo/scoring": "*",
         "better-auth": "^1.4.17",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -57,6 +58,7 @@
       "name": "@repo/database",
       "version": "0.0.0",
       "dependencies": {
+        "@repo/scoring": "*",
         "dotenv": "^17.2.3",
         "drizzle-orm": "^0.45.1",
         "pg": "^8.17.2",
@@ -67,7 +69,7 @@
         "@types/pg": "^8.16.0",
         "drizzle-kit": "^0.31.8",
         "eslint": "^9.39.1",
-        "tsx": "^4.21.0",
+        "typescript": "5.9.2",
       },
     },
     "packages/eslint-config": {
@@ -85,6 +87,16 @@
         "globals": "^16.5.0",
         "typescript": "^5.9.2",
         "typescript-eslint": "^8.50.0",
+      },
+    },
+    "packages/scoring": {
+      "name": "@repo/scoring",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@repo/eslint-config": "*",
+        "@repo/typescript-config": "*",
+        "eslint": "^9.39.1",
+        "typescript": "5.9.2",
       },
     },
     "packages/typescript-config": {
@@ -546,6 +558,8 @@
     "@repo/database": ["@repo/database@workspace:packages/database"],
 
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
+
+    "@repo/scoring": ["@repo/scoring@workspace:packages/scoring"],
 
     "@repo/typescript-config": ["@repo/typescript-config@workspace:packages/typescript-config"],
 

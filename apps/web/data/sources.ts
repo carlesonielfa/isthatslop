@@ -1,7 +1,14 @@
 import "server-only";
 
 import { cache } from "react";
-import { db, sources, sourceScoreCache, reviews, user } from "@repo/database";
+import {
+  db,
+  sources,
+  sourceScoreCache,
+  claims,
+  claimComments,
+  user,
+} from "@repo/database";
 import { desc, eq, isNull, count, and, sql, asc } from "drizzle-orm";
 import { formatTimeAgo } from "@/lib/date";
 
@@ -28,40 +35,121 @@ export interface SourceDTO {
   id: string;
   rank: number;
   name: string;
+  slug: string;
   type: string | null;
-  tier: number;
-  reviews: number;
+  tier: number | null;
+  claims: number;
   addedBy: string;
   timeAgo: string;
 }
 
 export interface SourceCompactDTO {
+  id: string;
   name: string;
-  tier: number;
-  reviews: number;
+  slug: string;
+  tier: number | null;
+  claims: number;
+}
+
+export interface SourceDetailDTO {
+  id: string;
+  slug: string;
+  name: string;
+  type: string | null;
+  description: string | null;
+  url: string | null;
+  parentId: string | null;
+  path: string;
+  depth: number;
+  createdAt: string;
+  createdByUsername: string | null;
+  createdByHandle: string | null;
+  tier: number | null;
+  claimCount: number;
+  rawScore: number | null;
+  normalizedScore: number | null;
+  // Official AI policy fields
+  officialAiPolicy: string | null;
+  officialAiPolicyUrl: string | null;
+  officialAiPolicyUpdatedAt: string | null;
+}
+
+export interface SourceBreadcrumbDTO {
+  id: string;
+  slug: string;
+  name: string;
+  depth: number;
+}
+
+export interface SourceChildDTO {
+  id: string;
+  slug: string;
+  name: string;
+  type: string | null;
+  tier: number | null;
+  claimCount: number;
+  childCount: number;
+}
+
+export type SourceClaimSort = "recent" | "helpful";
+
+export interface SourceClaimDTO {
+  id: string;
+  impact: number;
+  confidence: number;
+  content: string;
+  helpfulVotes: number;
+  notHelpfulVotes: number;
+  commentCount: number;
+  disputeCount: number;
+  createdAt: string;
+  isEdited: boolean;
+  user: {
+    id: string;
+    username: string | null;
+    displayUsername: string | null;
+    avatarUrl: string | null;
+    reputation: number;
+  };
+}
+
+export interface ClaimCommentDTO {
+  id: string;
+  claimId: string;
+  content: string;
+  isDispute: boolean;
+  helpfulVotes: number;
+  createdAt: string;
+  isEdited: boolean;
+  user: {
+    id: string;
+    username: string | null;
+    displayUsername: string | null;
+    avatarUrl: string | null;
+    reputation: number;
+  };
+}
+
+export interface SourceClaimsPageDTO {
+  claims: SourceClaimDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sort: SourceClaimSort;
 }
 
 export interface SiteStatsDTO {
   sources: number;
-  reviews: number;
+  claims: number;
   users: number;
 }
 
-// Tier configuration - public data, safe to expose
-export const tiers = [
-  { tier: 0, name: "Pure Artisanal", icon: "sparkle", color: "#006400" },
-  { tier: 1, name: "AI-Inspired", icon: "lightbulb", color: "#008000" },
-  { tier: 2, name: "AI-Polished", icon: "check", color: "#90EE90" },
-  { tier: 3, name: "Co-Created", icon: "handshake", color: "#FFD700" },
-  { tier: 4, name: "Human-Guided", icon: "target", color: "#FF8C00" },
-  { tier: 5, name: "Light Edit", icon: "magnifying-glass", color: "#FF4500" },
-  { tier: 6, name: "Pure Slop", icon: "robot", color: "#FF0000" },
-] as const;
-
-export type TierInfo = (typeof tiers)[number];
+// Re-export tiers from shared location for backwards compatibility
+export { tiers, type TierInfo } from "@/lib/tiers";
 
 /**
- * Get recent sources with their scores and review counts.
+ * Get recent sources with their scores and claim counts.
  * Returns a DTO with only public, safe-to-display data.
  */
 export const getRecentSourcesDTO = cache(
@@ -72,11 +160,12 @@ export const getRecentSourcesDTO = cache(
           .select({
             id: sources.id,
             name: sources.name,
+            slug: sources.slug,
             type: sources.type,
             createdAt: sources.createdAt,
             addedByUsername: user.username,
             tier: sourceScoreCache.tier,
-            reviewCount: sourceScoreCache.reviewCount,
+            claimCount: sourceScoreCache.claimCount,
           })
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
@@ -89,9 +178,10 @@ export const getRecentSourcesDTO = cache(
           id: row.id,
           rank: index + 1,
           name: row.name,
+          slug: row.slug,
           type: row.type,
-          tier: row.tier ? Math.round(Number(row.tier)) : 3,
-          reviews: row.reviewCount ?? 0,
+          tier: row.tier ?? null,
+          claims: row.claimCount ?? 0,
           addedBy: row.addedByUsername ?? "anonymous",
           timeAgo: formatTimeAgo(row.createdAt),
         }));
@@ -113,8 +203,10 @@ export const getHallOfFameDTO = cache(
         const result = await db
           .select({
             name: sources.name,
+            id: sources.id,
+            slug: sources.slug,
             tier: sourceScoreCache.tier,
-            reviewCount: sourceScoreCache.reviewCount,
+            claimCount: sourceScoreCache.claimCount,
           })
           .from(sources)
           .innerJoin(
@@ -122,13 +214,15 @@ export const getHallOfFameDTO = cache(
             eq(sources.id, sourceScoreCache.sourceId),
           )
           .where(isNull(sources.deletedAt))
-          .orderBy(sourceScoreCache.tier, desc(sourceScoreCache.reviewCount))
+          .orderBy(sourceScoreCache.tier, desc(sourceScoreCache.claimCount))
           .limit(limit);
 
         return result.map((row) => ({
+          id: row.id,
           name: row.name,
-          tier: row.tier ? Math.round(Number(row.tier)) : 0,
-          reviews: row.reviewCount ?? 0,
+          slug: row.slug,
+          tier: row.tier ?? null,
+          claims: row.claimCount ?? 0,
         }));
       },
       [],
@@ -148,8 +242,10 @@ export const getHallOfShameDTO = cache(
         const result = await db
           .select({
             name: sources.name,
+            id: sources.id,
+            slug: sources.slug,
             tier: sourceScoreCache.tier,
-            reviewCount: sourceScoreCache.reviewCount,
+            claimCount: sourceScoreCache.claimCount,
           })
           .from(sources)
           .innerJoin(
@@ -159,14 +255,16 @@ export const getHallOfShameDTO = cache(
           .where(isNull(sources.deletedAt))
           .orderBy(
             desc(sourceScoreCache.tier),
-            desc(sourceScoreCache.reviewCount),
+            desc(sourceScoreCache.claimCount),
           )
           .limit(limit);
 
         return result.map((row) => ({
+          id: row.id,
           name: row.name,
-          tier: row.tier ? Math.round(Number(row.tier)) : 6,
-          reviews: row.reviewCount ?? 0,
+          slug: row.slug,
+          tier: row.tier ?? null,
+          claims: row.claimCount ?? 0,
         }));
       },
       [],
@@ -182,25 +280,25 @@ export const getHallOfShameDTO = cache(
 export const getSiteStatsDTO = cache(async (): Promise<SiteStatsDTO> => {
   return safeQuery(
     async () => {
-      const [sourcesResult, reviewsResult, usersResult] = await Promise.all([
+      const [sourcesResult, claimsResult, usersResult] = await Promise.all([
         db
           .select({ count: count() })
           .from(sources)
           .where(isNull(sources.deletedAt)),
         db
           .select({ count: count() })
-          .from(reviews)
-          .where(isNull(reviews.deletedAt)),
+          .from(claims)
+          .where(isNull(claims.deletedAt)),
         db.select({ count: count() }).from(user),
       ]);
 
       return {
         sources: sourcesResult[0]?.count ?? 0,
-        reviews: reviewsResult[0]?.count ?? 0,
+        claims: claimsResult[0]?.count ?? 0,
         users: usersResult[0]?.count ?? 0,
       };
     },
-    { sources: 0, reviews: 0, users: 0 },
+    { sources: 0, claims: 0, users: 0 },
     "getSiteStatsDTO",
   );
 });
@@ -215,7 +313,7 @@ export interface SourceTreeNodeDTO {
   name: string;
   type: string | null;
   tier: number | null;
-  reviewCount: number;
+  claimCount: number;
   depth: number;
   parentId: string | null;
   childCount: number;
@@ -258,12 +356,12 @@ export const getSourcesForBrowseDTO = cache(
         }
         if (filters.tierMin !== undefined) {
           filterConditions.push(
-            sql`COALESCE(${sourceScoreCache.tier}, 3) >= ${filters.tierMin}`,
+            sql`COALESCE(${sourceScoreCache.tier}, 0) >= ${filters.tierMin}`,
           );
         }
         if (filters.tierMax !== undefined) {
           filterConditions.push(
-            sql`COALESCE(${sourceScoreCache.tier}, 3) <= ${filters.tierMax}`,
+            sql`COALESCE(${sourceScoreCache.tier}, 0) <= ${filters.tierMax}`,
           );
         }
         if (filters.query) {
@@ -289,7 +387,7 @@ export const getSourcesForBrowseDTO = cache(
             parentId: sources.parentId,
             path: sources.path,
             tier: sourceScoreCache.tier,
-            reviewCount: sourceScoreCache.reviewCount,
+            claimCount: sourceScoreCache.claimCount,
           })
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
@@ -331,7 +429,7 @@ export const getSourcesForBrowseDTO = cache(
                 parentId: sources.parentId,
                 path: sources.path,
                 tier: sourceScoreCache.tier,
-                reviewCount: sourceScoreCache.reviewCount,
+                claimCount: sourceScoreCache.claimCount,
               })
               .from(sources)
               .leftJoin(
@@ -393,8 +491,8 @@ export const getSourcesForBrowseDTO = cache(
           slug: row.slug,
           name: row.name,
           type: row.type,
-          tier: row.tier ? Math.round(Number(row.tier)) : null,
-          reviewCount: row.reviewCount ?? 0,
+          tier: row.tier ?? null,
+          claimCount: row.claimCount ?? 0,
           depth: row.depth,
           parentId: row.parentId,
           childCount: childCountMap.get(row.id) ?? 0,
@@ -425,12 +523,12 @@ export async function getSourceChildrenDTO(
       depth: sources.depth,
       parentId: sources.parentId,
       tier: sourceScoreCache.tier,
-      reviewCount: sourceScoreCache.reviewCount,
+      claimCount: sourceScoreCache.claimCount,
     })
     .from(sources)
     .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
     .where(and(eq(sources.parentId, parentId), isNull(sources.deletedAt)))
-    .orderBy(desc(sourceScoreCache.reviewCount), asc(sources.name))
+    .orderBy(desc(sourceScoreCache.claimCount), asc(sources.name))
     .limit(limit + 1) // Fetch one extra to check if there are more
     .offset(offset);
 
@@ -464,8 +562,8 @@ export async function getSourceChildrenDTO(
       slug: row.slug,
       name: row.name,
       type: row.type,
-      tier: row.tier ? Math.round(Number(row.tier)) : null,
-      reviewCount: row.reviewCount ?? 0,
+      tier: row.tier ?? null,
+      claimCount: row.claimCount ?? 0,
       depth: row.depth,
       parentId: row.parentId,
       childCount: childCountMap.get(row.id) ?? 0,
@@ -493,3 +591,394 @@ export const getSourceTypesDTO = cache(async (): Promise<string[]> => {
     "getSourceTypesDTO",
   );
 });
+
+// =============================================================================
+// SOURCE DETAIL DATA ACCESS
+// =============================================================================
+
+export const getSourceDetailByIdDTO = cache(
+  async (sourceId: string): Promise<SourceDetailDTO | null> => {
+    return safeQuery(
+      async () => {
+        const result = await db
+          .select({
+            id: sources.id,
+            slug: sources.slug,
+            name: sources.name,
+            type: sources.type,
+            description: sources.description,
+            url: sources.url,
+            parentId: sources.parentId,
+            path: sources.path,
+            depth: sources.depth,
+            createdAt: sources.createdAt,
+            createdByUsername: user.displayUsername,
+            createdByHandle: user.username,
+            officialAiPolicy: sources.officialAiPolicy,
+            officialAiPolicyUrl: sources.officialAiPolicyUrl,
+            officialAiPolicyUpdatedAt: sources.officialAiPolicyUpdatedAt,
+            tier: sourceScoreCache.tier,
+            claimCount: sourceScoreCache.claimCount,
+            rawScore: sourceScoreCache.rawScore,
+            normalizedScore: sourceScoreCache.normalizedScore,
+          })
+          .from(sources)
+          .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+          .leftJoin(user, eq(sources.createdByUserId, user.id))
+          .where(and(eq(sources.id, sourceId), isNull(sources.deletedAt)))
+          .limit(1);
+
+        const row = result[0];
+        if (!row) return null;
+
+        return {
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          type: row.type,
+          description: row.description,
+          url: row.url,
+          parentId: row.parentId,
+          path: row.path,
+          depth: row.depth,
+          createdAt: row.createdAt.toISOString(),
+          createdByUsername: row.createdByUsername,
+          createdByHandle: row.createdByHandle,
+          tier: row.tier ?? null,
+          claimCount: row.claimCount ?? 0,
+          rawScore: row.rawScore ? Number(row.rawScore) : null,
+          normalizedScore: row.normalizedScore
+            ? Number(row.normalizedScore)
+            : null,
+          officialAiPolicy: row.officialAiPolicy,
+          officialAiPolicyUrl: row.officialAiPolicyUrl,
+          officialAiPolicyUpdatedAt: row.officialAiPolicyUpdatedAt
+            ? row.officialAiPolicyUpdatedAt.toISOString()
+            : null,
+        };
+      },
+      null,
+      `getSourceDetailByIdDTO(${sourceId})`,
+    );
+  },
+);
+
+export const getSourceDetailBySlugPathDTO = cache(
+  async (slugPath: string[]): Promise<SourceDetailDTO | null> => {
+    return safeQuery(
+      async () => {
+        if (slugPath.length === 0) return null;
+
+        let parentId: string | null = null;
+        let currentId: string | null = null;
+
+        for (const slug of slugPath) {
+          const result: { id: string }[] = await db
+            .select({ id: sources.id })
+            .from(sources)
+            .where(
+              and(
+                eq(sources.slug, slug),
+                parentId
+                  ? eq(sources.parentId, parentId)
+                  : isNull(sources.parentId),
+                isNull(sources.deletedAt),
+              ),
+            )
+            .limit(1);
+
+          const row: { id: string } | undefined = result[0];
+          if (!row) return null;
+          currentId = row.id;
+          parentId = row.id;
+        }
+
+        if (!currentId) return null;
+        return getSourceDetailByIdDTO(currentId);
+      },
+      null,
+      `getSourceDetailBySlugPathDTO(${slugPath.join("/")})`,
+    );
+  },
+);
+
+export const getSourceBreadcrumbsDTO = cache(
+  async (path: string): Promise<SourceBreadcrumbDTO[]> => {
+    return safeQuery(
+      async () => {
+        const ids = path.split(".").filter(Boolean);
+        if (ids.length === 0) return [];
+
+        const results = await db
+          .select({
+            id: sources.id,
+            slug: sources.slug,
+            name: sources.name,
+            depth: sources.depth,
+          })
+          .from(sources)
+          .where(
+            and(
+              sql`${sources.id} = ANY(ARRAY[${sql.raw(
+                ids.map((id) => `'${id}'::uuid`).join(","),
+              )}])`,
+              isNull(sources.deletedAt),
+            ),
+          )
+          .orderBy(asc(sources.depth));
+
+        return results;
+      },
+      [],
+      "getSourceBreadcrumbsDTO",
+    );
+  },
+);
+
+export const getSourceChildrenSummaryDTO = cache(
+  async (
+    parentId: string,
+    limit = 20,
+  ): Promise<{ children: SourceChildDTO[]; total: number }> => {
+    return safeQuery(
+      async () => {
+        const [countResult, childrenResult] = await Promise.all([
+          db
+            .select({ count: count() })
+            .from(sources)
+            .where(
+              and(eq(sources.parentId, parentId), isNull(sources.deletedAt)),
+            ),
+          db
+            .select({
+              id: sources.id,
+              slug: sources.slug,
+              name: sources.name,
+              type: sources.type,
+              tier: sourceScoreCache.tier,
+              claimCount: sourceScoreCache.claimCount,
+            })
+            .from(sources)
+            .leftJoin(
+              sourceScoreCache,
+              eq(sources.id, sourceScoreCache.sourceId),
+            )
+            .where(
+              and(eq(sources.parentId, parentId), isNull(sources.deletedAt)),
+            )
+            .orderBy(desc(sourceScoreCache.claimCount), asc(sources.name))
+            .limit(limit),
+        ]);
+
+        const children = childrenResult.map((row) => ({
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          type: row.type,
+          tier: row.tier ?? null,
+          claimCount: row.claimCount ?? 0,
+          childCount: 0,
+        }));
+
+        const ids = children.map((child) => child.id);
+        const childCounts =
+          ids.length > 0
+            ? await db
+                .select({
+                  parentId: sources.parentId,
+                  count: count(),
+                })
+                .from(sources)
+                .where(
+                  and(
+                    sql`${sources.parentId} = ANY(ARRAY[${sql.raw(
+                      ids.map((id) => `'${id}'::uuid`).join(","),
+                    )}])`,
+                    isNull(sources.deletedAt),
+                  ),
+                )
+                .groupBy(sources.parentId)
+            : [];
+
+        const childCountMap = new Map(
+          childCounts.map((row) => [row.parentId, row.count]),
+        );
+
+        const enriched = children.map((child) => ({
+          ...child,
+          childCount: childCountMap.get(child.id) ?? 0,
+        }));
+
+        return {
+          children: enriched,
+          total: countResult[0]?.count ?? 0,
+        };
+      },
+      { children: [], total: 0 },
+      `getSourceChildrenSummaryDTO(${parentId})`,
+    );
+  },
+);
+
+export const getSourceClaimsDTO = cache(
+  async (
+    sourceId: string,
+    sort: SourceClaimSort,
+    requestedPage = 1,
+    pageSize = 10,
+  ): Promise<SourceClaimsPageDTO> => {
+    return safeQuery(
+      async () => {
+        const commentCounts = db
+          .select({
+            claimId: claimComments.claimId,
+            commentCount: count(claimComments.id).as("comment_count"),
+            disputeCount:
+              sql<number>`SUM(CASE WHEN ${claimComments.isDispute} THEN 1 ELSE 0 END)`.as(
+                "dispute_count",
+              ),
+          })
+          .from(claimComments)
+          .innerJoin(claims, eq(claimComments.claimId, claims.id))
+          .where(
+            and(
+              eq(claims.sourceId, sourceId),
+              isNull(claims.deletedAt),
+              isNull(claimComments.deletedAt),
+            ),
+          )
+          .groupBy(claimComments.claimId)
+          .as("comment_counts");
+
+        const countResult = await db
+          .select({ count: count() })
+          .from(claims)
+          .where(and(eq(claims.sourceId, sourceId), isNull(claims.deletedAt)));
+
+        const total = countResult[0]?.count ?? 0;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const page = Math.min(Math.max(1, requestedPage), totalPages);
+        const offset = (page - 1) * pageSize;
+
+        const orderBy =
+          sort === "helpful"
+            ? [desc(claims.helpfulVotes), desc(claims.createdAt)]
+            : [desc(claims.createdAt)];
+
+        const result = await db
+          .select({
+            id: claims.id,
+            impact: claims.impact,
+            confidence: claims.confidence,
+            content: claims.content,
+            helpfulVotes: claims.helpfulVotes,
+            notHelpfulVotes: claims.notHelpfulVotes,
+            commentCount: commentCounts.commentCount,
+            disputeCount: commentCounts.disputeCount,
+            createdAt: claims.createdAt,
+            updatedAt: claims.updatedAt,
+            userId: user.id,
+            username: user.username,
+            displayUsername: user.displayUsername,
+            avatarUrl: user.avatarUrl,
+            reputation: user.reputation,
+          })
+          .from(claims)
+          .innerJoin(user, eq(claims.userId, user.id))
+          .leftJoin(commentCounts, eq(claims.id, commentCounts.claimId))
+          .where(and(eq(claims.sourceId, sourceId), isNull(claims.deletedAt)))
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset(offset);
+
+        return {
+          claims: result.map((row) => ({
+            id: row.id,
+            impact: row.impact,
+            confidence: row.confidence,
+            content: row.content,
+            helpfulVotes: row.helpfulVotes,
+            notHelpfulVotes: row.notHelpfulVotes,
+            commentCount: Number(row.commentCount ?? 0),
+            disputeCount: Number(row.disputeCount ?? 0),
+            createdAt: row.createdAt.toISOString(),
+            isEdited: row.updatedAt.getTime() > row.createdAt.getTime(),
+            user: {
+              id: row.userId,
+              username: row.username,
+              displayUsername: row.displayUsername,
+              avatarUrl: row.avatarUrl,
+              reputation: row.reputation,
+            },
+          })),
+          total,
+          page,
+          pageSize,
+          totalPages,
+          sort,
+        };
+      },
+      {
+        claims: [],
+        total: 0,
+        page: 1,
+        pageSize,
+        totalPages: 1,
+        sort,
+      },
+      `getSourceClaimsDTO(${sourceId}, ${sort}, ${requestedPage})`,
+    );
+  },
+);
+
+export const getClaimCommentsDTO = cache(
+  async (claimId: string): Promise<ClaimCommentDTO[]> => {
+    return safeQuery(
+      async () => {
+        const result = await db
+          .select({
+            id: claimComments.id,
+            claimId: claimComments.claimId,
+            content: claimComments.content,
+            isDispute: claimComments.isDispute,
+            helpfulVotes: claimComments.helpfulVotes,
+            createdAt: claimComments.createdAt,
+            updatedAt: claimComments.updatedAt,
+            userId: user.id,
+            username: user.username,
+            displayUsername: user.displayUsername,
+            avatarUrl: user.avatarUrl,
+            reputation: user.reputation,
+          })
+          .from(claimComments)
+          .innerJoin(user, eq(claimComments.userId, user.id))
+          .where(
+            and(
+              eq(claimComments.claimId, claimId),
+              isNull(claimComments.deletedAt),
+            ),
+          )
+          .orderBy(desc(claimComments.createdAt));
+
+        return result.map((row) => ({
+          id: row.id,
+          claimId: row.claimId,
+          content: row.content,
+          isDispute: row.isDispute,
+          helpfulVotes: row.helpfulVotes,
+          createdAt: row.createdAt.toISOString(),
+          isEdited: row.updatedAt.getTime() > row.createdAt.getTime(),
+          user: {
+            id: row.userId,
+            username: row.username,
+            displayUsername: row.displayUsername,
+            avatarUrl: row.avatarUrl,
+            reputation: row.reputation,
+          },
+        }));
+      },
+      [],
+      `getClaimCommentsDTO(${claimId})`,
+    );
+  },
+);

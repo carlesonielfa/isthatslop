@@ -4,6 +4,7 @@ import {
   tiers,
 } from "@/data/sources";
 import { Card, CardContent, CardTitleBar } from "@/components/ui/card";
+import { TierBadge } from "@/components/tier-badge";
 import { SourceTree } from "./source-tree";
 import { BrowseFilters } from "./browse-filters";
 
@@ -59,13 +60,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               <div className="space-y-1">
                 {tiers.map((t) => (
                   <div key={t.tier} className="flex items-center gap-2">
-                    <span
-                      className="inline-flex items-center justify-center min-w-5 h-5 px-1 font-bold text-white text-xs"
-                      style={{ backgroundColor: t.color }}
-                    >
-                      {t.tier}
-                    </span>
-                    <span className="text-xs">{t.name}</span>
+                    <TierBadge tier={t.tier} size="sm" />
                   </div>
                 ))}
               </div>
@@ -93,7 +88,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                   )}
                 </div>
               ) : (
-                <SourceTree sources={sources} tiers={tiers} />
+                <SourceTree sources={sources} />
               )}
             </CardContent>
           </Card>

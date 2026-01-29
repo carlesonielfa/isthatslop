@@ -155,7 +155,7 @@ export default function ProfileSettingsPage() {
                   disabled={isLoading}
                 />
                 <FieldDescription>
-                  This appears on your reviews and profile
+                  This appears on your claims and profile
                 </FieldDescription>
               </Field>
 
@@ -198,10 +198,10 @@ export default function ProfileSettingsPage() {
           <div className="space-y-2 text-xs">
             <p className="font-medium">How to earn reputation:</p>
             <ul className="space-y-1 text-muted-foreground">
-              <li>+10 when your review gets 10+ helpful votes</li>
-              <li>+5 when a source you added gets 5+ reviews</li>
+              <li>+10 when your claim gets 10+ helpful votes</li>
+              <li>+5 when a source you added gets 5+ claims</li>
               <li>+2 for each source you add</li>
-              <li>+1 for each verified review you submit</li>
+              <li>+1 for each verified claim you submit</li>
             </ul>
           </div>
         </CardContent>

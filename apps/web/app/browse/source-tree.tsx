@@ -12,43 +12,16 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { buildTree, type TreeNode } from "@/lib/tree";
-import type { SourceTreeNodeDTO, TierInfo } from "@/data/sources";
+import type { SourceTreeNodeDTO } from "@/data/sources";
 import { fetchSourceChildren } from "@/data/actions";
+import { TierBadge } from "@/components/tier-badge";
 
 interface SourceTreeProps {
   sources: SourceTreeNodeDTO[];
-  tiers: readonly TierInfo[];
-}
-
-function TierBadge({
-  tier,
-  tiers,
-}: {
-  tier: number | null;
-  tiers: readonly TierInfo[];
-}) {
-  const tierInfo = tier !== null ? tiers[tier] : null;
-  if (!tierInfo) {
-    return (
-      <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 font-bold text-white text-xs bg-muted-foreground">
-        ?
-      </span>
-    );
-  }
-  return (
-    <span
-      className="inline-flex items-center justify-center min-w-5 h-5 px-1 font-bold text-white text-xs"
-      style={{ backgroundColor: tierInfo.color }}
-      title={tierInfo.name}
-    >
-      {tier}
-    </span>
-  );
 }
 
 function TreeNodeRow({
   node,
-  tiers,
   level,
   expandedIds,
   loadingIds,
@@ -56,7 +29,6 @@ function TreeNodeRow({
   onLoadMore,
 }: {
   node: TreeNode;
-  tiers: readonly TierInfo[];
   level: number;
   expandedIds: Set<string>;
   loadingIds: Set<string>;
@@ -112,11 +84,11 @@ function TreeNodeRow({
         </span>
 
         {/* Tier badge */}
-        <TierBadge tier={node.tier} tiers={tiers} />
+        <TierBadge tier={node.tier} size="sm" />
 
         {/* Name */}
         <Link
-          href={`/sources/${node.slug}`}
+          href={`/sources/${node.id}/${node.slug}`}
           className={cn(
             "hover:underline text-sm flex-1 min-w-0 truncate",
             node.isMatch ? "text-accent font-medium" : "text-muted-foreground",
@@ -132,9 +104,9 @@ function TreeNodeRow({
           </span>
         )}
 
-        {/* Review count */}
+        {/* Claim count */}
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {node.reviewCount} reviews
+          {node.claimCount} claims
         </span>
 
         {/* Child count indicator */}
@@ -151,7 +123,6 @@ function TreeNodeRow({
           <TreeNodeRow
             key={child.id}
             node={child}
-            tiers={tiers}
             level={level + 1}
             expandedIds={expandedIds}
             loadingIds={loadingIds}
@@ -175,7 +146,7 @@ function TreeNodeRow({
   );
 }
 
-export function SourceTree({ sources, tiers }: SourceTreeProps) {
+export function SourceTree({ sources }: SourceTreeProps) {
   // Store dynamically loaded children separately from initial sources
   const [dynamicChildren, setDynamicChildren] = useState<
     Map<string, { children: SourceTreeNodeDTO[]; hasMore: boolean }>
@@ -342,7 +313,6 @@ export function SourceTree({ sources, tiers }: SourceTreeProps) {
           <TreeNodeRow
             key={node.id}
             node={node}
-            tiers={tiers}
             level={0}
             expandedIds={expandedIds}
             loadingIds={loadingIds}
