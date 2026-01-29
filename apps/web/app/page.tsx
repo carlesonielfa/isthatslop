@@ -20,6 +20,7 @@ import {
   type SourceDTO,
   type SourceCompactDTO,
 } from "@/data/sources";
+import { getTierColor } from "@/lib/tiers";
 
 const tierDescriptions: Record<number, string> = {
   0: "No credible claims, or all claims dismissed",
@@ -30,21 +31,48 @@ const tierDescriptions: Record<number, string> = {
 };
 
 function SourceRankItem({ source }: { source: SourceDTO }) {
+  const tierColor = getTierColor(source.tier);
+
   return (
-    <div className="flex items-center gap-2 py-1.5 border-b border-border-dark/30 last:border-b-0">
-      <span className="w-5 text-right text-xs">{source.rank}.</span>
-      <TierBadge tier={source.tier} size="sm" />
-      <div className="flex-1 min-w-0">
+    <>
+      {/* Mobile layout */}
+      <div className="flex sm:hidden items-center gap-1.5 py-1.5 border-b border-border-dark/30 last:border-b-0">
+        <span className="w-5 text-right text-xs shrink-0">{source.rank}.</span>
         <Link
           href={`/sources/${source.id}/${source.slug}`}
-          className="text-accent hover:underline font-medium"
+          className="hover:underline text-xs font-medium text-white px-1.5 py-0.5 min-w-0 truncate"
+          style={{ backgroundColor: tierColor }}
         >
           {source.name}
         </Link>
-        <span className="text-xs ml-1">({source.type})</span>
+        <span className="flex-1" />
+        {source.type && (
+          <span className="text-2xs text-muted-foreground px-1 py-0.5 bg-muted shrink-0">
+            {source.type}
+          </span>
+        )}
+        <span className="text-2xs text-muted-foreground shrink-0">
+          {source.claims}
+        </span>
       </div>
-      <span className="text-xs whitespace-nowrap">{source.claims} claims</span>
-    </div>
+      {/* Desktop layout */}
+      <div className="hidden sm:flex items-center gap-2 py-1.5 border-b border-border-dark/30 last:border-b-0">
+        <span className="w-5 text-right text-xs">{source.rank}.</span>
+        <TierBadge tier={source.tier} size="sm" />
+        <div className="flex-1 min-w-0">
+          <Link
+            href={`/sources/${source.id}/${source.slug}`}
+            className="text-accent hover:underline font-medium"
+          >
+            {source.name}
+          </Link>
+          <span className="text-xs ml-1">({source.type})</span>
+        </div>
+        <span className="text-xs whitespace-nowrap">
+          {source.claims} claims
+        </span>
+      </div>
+    </>
   );
 }
 
@@ -81,7 +109,14 @@ export default async function HomePage() {
         <Card className="mb-4">
           <CardTitleBar>Tier Guide</CardTitleBar>
           <CardContent className="py-4">
-            <div className="flex flex-nowrap justify-between gap-3">
+            {/* Mobile: wrapped badges, centered */}
+            <div className="flex sm:hidden flex-wrap justify-center gap-2">
+              {tiers.map((t) => (
+                <TierBadge key={t.tier} tier={t.tier} size="sm" />
+              ))}
+            </div>
+            {/* Desktop: full layout with descriptions */}
+            <div className="hidden sm:flex flex-nowrap justify-between gap-3">
               {tiers.map((t) => (
                 <div
                   key={t.tier}

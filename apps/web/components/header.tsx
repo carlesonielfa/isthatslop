@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserMenu } from "@/components/user-menu";
+import { authClient, useSession } from "@/app/lib/auth.client";
 import {
   HouseIcon,
   FolderOpenIcon,
@@ -20,6 +21,10 @@ import {
   SkullIcon,
   MagnifyingGlassIcon,
   ListIcon,
+  UserIcon,
+  SignInIcon,
+  SignOutIcon,
+  UserPlusIcon,
 } from "@phosphor-icons/react";
 
 function SearchForm({ className }: { className?: string }) {
@@ -55,8 +60,23 @@ function SearchForm({ className }: { className?: string }) {
 }
 
 function MobileNav() {
+  const router = useRouter();
+  const { data: session, isPending } = useSession();
+
+  async function handleSignOut() {
+    await authClient.signOut();
+    router.push("/");
+    router.refresh();
+  }
+
+  const user = session?.user as {
+    name?: string;
+    username?: string;
+    displayUsername?: string;
+  } | undefined;
+
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="default" size="sm" className="md:hidden">
           <ListIcon className="size-4 mr-1" />
@@ -89,6 +109,43 @@ function MobileNav() {
             Hall of Shame
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {isPending ? (
+          <DropdownMenuItem disabled>
+            <span className="text-muted-foreground">Loading...</span>
+          </DropdownMenuItem>
+        ) : user ? (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/profile" className="flex items-center gap-2">
+                <UserIcon className="size-4" />
+                @{user.displayUsername || user.username || "user"}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              className="flex items-center gap-2"
+            >
+              <SignOutIcon className="size-4" />
+              Logout
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/login" className="flex items-center gap-2">
+                <SignInIcon className="size-4" />
+                Login
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/signup" className="flex items-center gap-2">
+                <UserPlusIcon className="size-4" />
+                Register
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -125,25 +182,13 @@ export function Header() {
           <Link href="/" className="font-bold text-lg hover:opacity-90">
             [IsThatSlop.com]
           </Link>
-          <MobileNav />
           <DesktopNav />
         </div>
 
-        {/* Right side: Search + User */}
-        <div className="flex items-center gap-2">
-          <SearchForm className="hidden sm:block" />
-          {/* Mobile search button that links to browse */}
-          <Button
-            variant="secondary"
-            size="icon-sm"
-            className="sm:hidden"
-            asChild
-          >
-            <Link href="/browse">
-              <MagnifyingGlassIcon className="size-4" />
-              <span className="sr-only">Search</span>
-            </Link>
-          </Button>
+        {/* Right side: Mobile menu or Search + User (desktop) */}
+        <MobileNav />
+        <div className="hidden md:flex items-center gap-2">
+          <SearchForm />
           <UserMenu />
         </div>
       </div>

@@ -128,20 +128,20 @@ export function SourceClaimCard({ claim, comments }: SourceClaimCardProps) {
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant={claim.userVote === true ? "default" : "outline"}
               disabled={isPending}
               onClick={() => handleVote(true)}
             >
-              Helpful
+              {claim.userVote === true ? "Voted Helpful" : "Helpful"}
             </Button>
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant={claim.userVote === false ? "destructive" : "outline"}
               disabled={isPending}
               onClick={() => handleVote(false)}
             >
-              Not helpful
+              {claim.userVote === false ? "Voted Not helpful" : "Not helpful"}
             </Button>
           </div>
           <details className="border-t border-border-dark/40 pt-3">

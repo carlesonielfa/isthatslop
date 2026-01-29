@@ -204,6 +204,7 @@ export const claims = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
+    contentUpdatedAt: timestamp("content_updated_at"), // Only set when content/impact/confidence are edited
     deletedAt: timestamp("deleted_at"), // Soft delete for audit trail
   },
   (table) => [

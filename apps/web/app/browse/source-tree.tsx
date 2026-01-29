@@ -15,6 +15,7 @@ import { buildTree, type TreeNode } from "@/lib/tree";
 import type { SourceTreeNodeDTO } from "@/data/sources";
 import { fetchSourceChildren } from "@/data/actions";
 import { TierBadge } from "@/components/tier-badge";
+import { getTierColor } from "@/lib/tiers";
 
 interface SourceTreeProps {
   sources: SourceTreeNodeDTO[];
@@ -38,16 +39,92 @@ function TreeNodeRow({
   const isExpanded = expandedIds.has(node.id);
   const isLoading = loadingIds.has(node.id);
   const hasChildren = node.children.length > 0 || node.childCount > 0;
-  const paddingLeft = level * 20;
+  const paddingLeft = level * 12; // Smaller indent on mobile
+  const tierColor = getTierColor(node.tier);
 
   return (
     <>
+      {/* Mobile layout - compact with tier color background */}
       <div
         className={cn(
-          "flex items-center gap-2 py-1.5 px-2 hover:bg-muted/50 border-b border-border-dark/20 last:border-b-0",
+          "flex sm:hidden items-center gap-1.5 py-1.5 px-2 border-b border-border-dark/20 last:border-b-0",
           !node.isMatch && "opacity-60",
         )}
-        style={{ paddingLeft: `${paddingLeft + 8}px` }}
+        style={{ paddingLeft: `${paddingLeft + 4}px` }}
+      >
+        {/* Expand/Collapse toggle */}
+        <button
+          onClick={() => hasChildren && !isLoading && onToggle(node.id)}
+          className={`shrink-0 flex items-center justify-center w-4 h-4 ${hasChildren && !isLoading ? "cursor-pointer" : "cursor-default"}`}
+          disabled={!hasChildren || isLoading}
+          aria-expanded={hasChildren ? isExpanded : undefined}
+          aria-label={
+            isLoading ? "Loading" : isExpanded ? "Collapse" : "Expand"
+          }
+        >
+          {isLoading ? (
+            <SpinnerIcon className="size-3 animate-spin" />
+          ) : hasChildren ? (
+            isExpanded ? (
+              <CaretDownIcon className="size-3" />
+            ) : (
+              <CaretRightIcon className="size-3" />
+            )
+          ) : null}
+        </button>
+
+        {/* Icon */}
+        <span className="shrink-0 text-muted-foreground">
+          {hasChildren ? (
+            isExpanded ? (
+              <FolderOpenIcon className="size-4" />
+            ) : (
+              <FolderIcon className="size-4" />
+            )
+          ) : (
+            <FileIcon className="size-4" />
+          )}
+        </span>
+
+        {/* Name with tier color background */}
+        <Link
+          href={`/sources/${node.id}/${node.slug}`}
+          className="hover:underline text-xs font-medium text-white px-1.5 py-0.5 min-w-0 truncate"
+          style={{ backgroundColor: tierColor }}
+        >
+          {node.name}
+        </Link>
+
+        {/* Spacer to push type badge and counts to the right */}
+        <span className="flex-1" />
+
+        {/* Type badge */}
+        {node.type && (
+          <span className="shrink-0 text-2xs text-muted-foreground px-1 py-0.5 bg-muted">
+            {node.type}
+          </span>
+        )}
+
+        {/* Claim count */}
+        <span className="shrink-0 text-2xs text-muted-foreground whitespace-nowrap">
+          {node.claimCount}
+        </span>
+
+        {/* Child count indicator */}
+        {node.childCount > 0 && !isExpanded && (
+          <span className="shrink-0 text-2xs text-muted-foreground">
+            +{node.childCount}
+          </span>
+        )}
+      </div>
+
+      {/* Desktop layout - full details */}
+      <div
+        className={cn(
+          "hidden sm:flex items-center gap-2 py-1.5 px-2 hover:bg-muted/50 border-b border-border-dark/20 last:border-b-0",
+          !node.isMatch && "opacity-60",
+        )}
+        style={{ paddingLeft: `${level * 20 + 8}px` }}
       >
         {/* Expand/Collapse toggle */}
         <button
@@ -295,7 +372,7 @@ export function SourceTree({ sources }: SourceTreeProps) {
   }
 
   return (
-    <div>
+    <div className="overflow-x-auto">
       {/* Tree controls */}
       <div className="flex gap-2 mb-2 text-xs">
         <button onClick={expandAll} className="text-accent hover:underline">

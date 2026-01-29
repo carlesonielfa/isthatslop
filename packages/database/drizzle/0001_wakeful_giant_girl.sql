@@ -1,0 +1,1 @@
+ALTER TABLE "claims" ADD COLUMN "content_updated_at" timestamp;

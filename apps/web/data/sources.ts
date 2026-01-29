@@ -7,9 +7,11 @@ import {
   sourceScoreCache,
   claims,
   claimComments,
+  claimVotes,
   user,
 } from "@repo/database";
-import { desc, eq, isNull, count, and, sql, asc } from "drizzle-orm";
+import { getCurrentUser } from "@/app/lib/auth.server";
+import { desc, eq, isNull, count, and, sql, asc, inArray } from "drizzle-orm";
 import { formatTimeAgo } from "@/lib/date";
 
 /**
@@ -104,6 +106,7 @@ export interface SourceClaimDTO {
   disputeCount: number;
   createdAt: string;
   isEdited: boolean;
+  userVote: boolean | null; // true = helpful, false = not helpful, null = no vote
   user: {
     id: string;
     username: string | null;
@@ -829,6 +832,9 @@ export const getSourceClaimsDTO = cache(
   ): Promise<SourceClaimsPageDTO> => {
     return safeQuery(
       async () => {
+        // Get current user for vote lookup
+        const currentUser = await getCurrentUser();
+
         const commentCounts = db
           .select({
             claimId: claimComments.claimId,
@@ -876,7 +882,7 @@ export const getSourceClaimsDTO = cache(
             commentCount: commentCounts.commentCount,
             disputeCount: commentCounts.disputeCount,
             createdAt: claims.createdAt,
-            updatedAt: claims.updatedAt,
+            contentUpdatedAt: claims.contentUpdatedAt,
             userId: user.id,
             username: user.username,
             displayUsername: user.displayUsername,
@@ -891,6 +897,29 @@ export const getSourceClaimsDTO = cache(
           .limit(pageSize)
           .offset(offset);
 
+        // Get user votes for these claims if logged in
+        const claimIds = result.map((r) => r.id);
+        let userVotesMap: Map<string, boolean> = new Map();
+
+        if (currentUser && claimIds.length > 0) {
+          const userVotes = await db
+            .select({
+              claimId: claimVotes.claimId,
+              isHelpful: claimVotes.isHelpful,
+            })
+            .from(claimVotes)
+            .where(
+              and(
+                eq(claimVotes.userId, currentUser.id),
+                inArray(claimVotes.claimId, claimIds),
+              ),
+            );
+
+          userVotesMap = new Map(
+            userVotes.map((v) => [v.claimId, v.isHelpful]),
+          );
+        }
+
         return {
           claims: result.map((row) => ({
             id: row.id,
@@ -902,7 +931,8 @@ export const getSourceClaimsDTO = cache(
             commentCount: Number(row.commentCount ?? 0),
             disputeCount: Number(row.disputeCount ?? 0),
             createdAt: row.createdAt.toISOString(),
-            isEdited: row.updatedAt.getTime() > row.createdAt.getTime(),
+            isEdited: row.contentUpdatedAt !== null,
+            userVote: userVotesMap.get(row.id) ?? null,
             user: {
               id: row.userId,
               username: row.username,

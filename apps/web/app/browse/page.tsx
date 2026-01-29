@@ -39,7 +39,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-4">
-      <div className="grid md:grid-cols-[280px_1fr] gap-4">
+      <div className="grid md:grid-cols-[280px_1fr] gap-4 min-w-0">
         {/* Sidebar - Filters */}
         <div className="space-y-4">
           <Card>
@@ -69,7 +69,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         </div>
 
         {/* Main Content - Tree View */}
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           <Card>
             <CardTitleBar>
               {hasFilters ? "Search Results" : "All Sources"}

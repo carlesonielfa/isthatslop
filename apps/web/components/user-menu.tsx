@@ -45,25 +45,9 @@ export function UserMenu() {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex items-center gap-2">
-        {user.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={user.image}
-            alt="Avatar"
-            className="w-6 h-6 border border-border"
-          />
-        ) : (
-          <div className="w-6 h-6 bg-muted border border-border flex items-center justify-center text-xs">
-            {(user.displayUsername ||
-              user.username ||
-              user.name)?.[0]?.toUpperCase() || "?"}
-          </div>
-        )}
-        <span className="text-xs hidden sm:inline">
-          @{user.displayUsername || user.username || "user"}
-        </span>
-      </div>
+      <span className="text-xs">
+        @{user.displayUsername || user.username || "user"}
+      </span>
       <Button variant="outline" size="sm" asChild>
         <Link href="/profile">Profile</Link>
       </Button>

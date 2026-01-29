@@ -108,7 +108,6 @@ export default function LoginPage() {
               <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
-                  variant="outline"
                   onClick={() => handleOAuthLogin("google")}
                   disabled={isLoading}
                 >
@@ -116,7 +115,6 @@ export default function LoginPage() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
                   onClick={() => handleOAuthLogin("github")}
                   disabled={isLoading}
                 >
@@ -124,7 +122,6 @@ export default function LoginPage() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
                   onClick={() => handleOAuthLogin("discord")}
                   disabled={isLoading}
                 >
