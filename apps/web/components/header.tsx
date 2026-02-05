@@ -69,11 +69,13 @@ function MobileNav() {
     router.refresh();
   }
 
-  const user = session?.user as {
-    name?: string;
-    username?: string;
-    displayUsername?: string;
-  } | undefined;
+  const user = session?.user as
+    | {
+        name?: string;
+        username?: string;
+        displayUsername?: string;
+      }
+    | undefined;
 
   return (
     <DropdownMenu modal={false}>
@@ -118,8 +120,8 @@ function MobileNav() {
           <>
             <DropdownMenuItem asChild>
               <Link href="/profile" className="flex items-center gap-2">
-                <UserIcon className="size-4" />
-                @{user.displayUsername || user.username || "user"}
+                <UserIcon className="size-4" />@
+                {user.displayUsername || user.username || "user"}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem

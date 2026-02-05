@@ -152,7 +152,9 @@ export default function LoginPage() {
                 </Button>
                 <Button
                   type="button"
-                  onClick={() => providers.discord && handleOAuthLogin("discord")}
+                  onClick={() =>
+                    providers.discord && handleOAuthLogin("discord")
+                  }
                   disabled={isLoading || !providers.discord}
                   className={
                     !providers.discord

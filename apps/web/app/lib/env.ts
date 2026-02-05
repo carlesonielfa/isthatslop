@@ -31,9 +31,21 @@ export const configuredProviders = {
 
 // Warn about partial OAuth configurations
 const oauthPairs = [
-  { name: "Google", id: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET },
-  { name: "GitHub", id: env.GITHUB_CLIENT_ID, secret: env.GITHUB_CLIENT_SECRET },
-  { name: "Discord", id: env.DISCORD_CLIENT_ID, secret: env.DISCORD_CLIENT_SECRET },
+  {
+    name: "Google",
+    id: env.GOOGLE_CLIENT_ID,
+    secret: env.GOOGLE_CLIENT_SECRET,
+  },
+  {
+    name: "GitHub",
+    id: env.GITHUB_CLIENT_ID,
+    secret: env.GITHUB_CLIENT_SECRET,
+  },
+  {
+    name: "Discord",
+    id: env.DISCORD_CLIENT_ID,
+    secret: env.DISCORD_CLIENT_SECRET,
+  },
 ];
 
 for (const provider of oauthPairs) {
@@ -42,8 +54,8 @@ for (const provider of oauthPairs) {
   if (hasId !== hasSecret) {
     console.warn(
       `[Auth] WARNING: ${provider.name} OAuth is partially configured. ` +
-      `Found ${hasId ? "client ID" : "client secret"} but missing ${hasId ? "client secret" : "client ID"}. ` +
-      `Set both ${provider.name.toUpperCase()}_CLIENT_ID and ${provider.name.toUpperCase()}_CLIENT_SECRET, or remove both.`
+        `Found ${hasId ? "client ID" : "client secret"} but missing ${hasId ? "client secret" : "client ID"}. ` +
+        `Set both ${provider.name.toUpperCase()}_CLIENT_ID and ${provider.name.toUpperCase()}_CLIENT_SECRET, or remove both.`,
     );
   }
 }

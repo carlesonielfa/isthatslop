@@ -11,7 +11,7 @@ const FROM_ADDRESS = "IsThatSlop Team <onboarding@resend.dev>";
 
 export async function sendVerificationEmail(
   user: { email: string; name: string },
-  url: string
+  url: string,
 ): Promise<void> {
   try {
     await resend.emails.send({
@@ -31,7 +31,7 @@ export async function sendVerificationEmail(
 
 export async function sendResetPasswordEmail(
   user: { email: string; name: string },
-  url: string
+  url: string,
 ): Promise<void> {
   try {
     await resend.emails.send({

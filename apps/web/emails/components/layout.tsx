@@ -13,7 +13,10 @@ interface LayoutProps {
   title?: string;
 }
 
-export default function Layout({ children, title = "IsThatSlop.com" }: LayoutProps) {
+export default function Layout({
+  children,
+  title = "IsThatSlop.com",
+}: LayoutProps) {
   return (
     <Html>
       <Head />

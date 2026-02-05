@@ -222,7 +222,9 @@ export default function SignupPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => providers.google && handleOAuthSignup("google")}
+                  onClick={() =>
+                    providers.google && handleOAuthSignup("google")
+                  }
                   disabled={isLoading || !providers.google}
                   className={
                     !providers.google
@@ -244,7 +246,9 @@ export default function SignupPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => providers.github && handleOAuthSignup("github")}
+                  onClick={() =>
+                    providers.github && handleOAuthSignup("github")
+                  }
                   disabled={isLoading || !providers.github}
                   className={
                     !providers.github
@@ -266,7 +270,9 @@ export default function SignupPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => providers.discord && handleOAuthSignup("discord")}
+                  onClick={() =>
+                    providers.discord && handleOAuthSignup("discord")
+                  }
                   disabled={isLoading || !providers.discord}
                   className={
                     !providers.discord

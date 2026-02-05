@@ -14,7 +14,7 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       // Fire-and-forget to prevent timing attacks
       sendResetPasswordEmail(user, url).catch((err) =>
-        console.error("[Auth] Failed to send password reset email:", err)
+        console.error("[Auth] Failed to send password reset email:", err),
       );
     },
   },
@@ -22,7 +22,7 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       // Fire-and-forget to prevent timing attacks
       sendVerificationEmail(user, url).catch((err) =>
-        console.error("[Auth] Failed to send verification email:", err)
+        console.error("[Auth] Failed to send verification email:", err),
       );
     },
     sendOnSignUp: true,
