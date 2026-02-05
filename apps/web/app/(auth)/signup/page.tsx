@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardTitleBar } from "@/components/ui/card";
@@ -17,7 +16,6 @@ import { authClient } from "@/app/lib/auth.client";
 import { useOAuthProviders } from "@/components/oauth-provider-context";
 
 export default function SignupPage() {
-  const router = useRouter();
   const providers = useOAuthProviders();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +23,7 @@ export default function SignupPage() {
     null,
   );
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const checkUsername = useCallback(async (username: string) => {
@@ -107,9 +106,9 @@ export default function SignupPage() {
       return;
     }
 
-    // Redirect to profile setup after signup
-    router.push("/onboarding/profile");
-    router.refresh();
+    // Show success message instead of redirecting
+    setSignupSuccess(true);
+    setIsLoading(false);
   }
 
   async function handleOAuthSignup(provider: "google" | "github" | "discord") {
@@ -128,7 +127,23 @@ export default function SignupPage() {
       <Card className="w-full max-w-md">
         <CardTitleBar>Register - IsThatSlop.com</CardTitleBar>
         <CardContent className="py-6">
-          <form onSubmit={handleEmailSignup}>
+          {signupSuccess ? (
+            <div className="space-y-4">
+              <div className="bg-green-100 border border-green-600 text-green-800 text-xs p-3">
+                Check your email for next steps.
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs">
+                  We&apos;ve sent a verification email. Click the link to
+                  activate your account.
+                </p>
+              </div>
+              <Button asChild className="w-full">
+                <Link href="/login">Go to Login</Link>
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleEmailSignup}>
             <FieldGroup>
               {error && (
                 <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-2">
@@ -301,6 +316,7 @@ export default function SignupPage() {
               </div>
             </FieldGroup>
           </form>
+          )}
         </CardContent>
       </Card>
     </div>

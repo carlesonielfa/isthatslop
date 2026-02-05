@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardTitleBar } from "@/components/ui/card";
@@ -15,7 +15,6 @@ import {
 import { authClient } from "@/app/lib/auth.client";
 
 function ResetPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
@@ -63,27 +62,26 @@ function ResetPasswordForm() {
 
     setSuccess(true);
     setIsLoading(false);
-
-    // Redirect to login after a brief delay
-    setTimeout(() => {
-      router.push("/login");
-    }, 2000);
   }
 
   if (!token) {
     return (
       <div className="space-y-4">
         <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-3">
-          Invalid or expired reset link. Please request a new password reset.
+          Reset link expired
         </div>
-        <div className="text-center">
-          <Link
-            href="/forgot-password"
-            className="text-accent hover:underline text-xs"
-          >
-            Request new reset link
-          </Link>
+        <div className="space-y-2">
+          <p className="text-xs">
+            This reset link has expired or is invalid.
+          </p>
+          <p className="text-xs">
+            To request a new password reset link, visit the forgot password
+            page.
+          </p>
         </div>
+        <Button asChild className="w-full">
+          <Link href="/forgot-password">Request new reset link</Link>
+        </Button>
       </div>
     );
   }
@@ -93,8 +91,17 @@ function ResetPasswordForm() {
       {success ? (
         <div className="space-y-4">
           <div className="bg-green-100 border border-green-600 text-green-800 text-xs p-3">
-            Password reset successful! Redirecting to login...
+            Your password has been changed
           </div>
+          <div className="space-y-2">
+            <p className="text-xs">
+              Your password has been updated. You can now sign in with your new
+              password.
+            </p>
+          </div>
+          <Button asChild className="w-full">
+            <Link href="/login">Sign In</Link>
+          </Button>
         </div>
       ) : (
         <form onSubmit={handleSubmit}>
