@@ -69,7 +69,7 @@ export default function ResetPasswordEmail({
           marginTop: "8px",
         }}
       >
-        If you didn't request this, you can safely ignore this email.
+        If you didn&apos;t request this, you can safely ignore this email.
       </Text>
     </Layout>
   );

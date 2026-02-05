@@ -68,7 +68,7 @@ export default function VerificationEmail({
           marginTop: "8px",
         }}
       >
-        If you didn't create an account, you can safely ignore this email.
+        If you didn&apos;t create an account, you can safely ignore this email.
       </Text>
     </Layout>
   );
