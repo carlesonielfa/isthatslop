@@ -14,9 +14,11 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { authClient } from "@/app/lib/auth.client";
+import { useOAuthProviders } from "@/components/oauth-provider-context";
 
 export default function SignupPage() {
   const router = useRouter();
+  const providers = useOAuthProviders();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(
@@ -220,26 +222,68 @@ export default function SignupPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => handleOAuthSignup("google")}
-                  disabled={isLoading}
+                  onClick={() => providers.google && handleOAuthSignup("google")}
+                  disabled={isLoading || !providers.google}
+                  className={
+                    !providers.google
+                      ? "opacity-60 cursor-not-allowed flex flex-col items-center gap-0.5 py-1"
+                      : ""
+                  }
                 >
-                  Google
+                  {providers.google ? (
+                    "Google"
+                  ) : (
+                    <>
+                      <span>Google</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        Coming soon
+                      </span>
+                    </>
+                  )}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => handleOAuthSignup("github")}
-                  disabled={isLoading}
+                  onClick={() => providers.github && handleOAuthSignup("github")}
+                  disabled={isLoading || !providers.github}
+                  className={
+                    !providers.github
+                      ? "opacity-60 cursor-not-allowed flex flex-col items-center gap-0.5 py-1"
+                      : ""
+                  }
                 >
-                  GitHub
+                  {providers.github ? (
+                    "GitHub"
+                  ) : (
+                    <>
+                      <span>GitHub</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        Coming soon
+                      </span>
+                    </>
+                  )}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => handleOAuthSignup("discord")}
-                  disabled={isLoading}
+                  onClick={() => providers.discord && handleOAuthSignup("discord")}
+                  disabled={isLoading || !providers.discord}
+                  className={
+                    !providers.discord
+                      ? "opacity-60 cursor-not-allowed flex flex-col items-center gap-0.5 py-1"
+                      : ""
+                  }
                 >
-                  Discord
+                  {providers.discord ? (
+                    "Discord"
+                  ) : (
+                    <>
+                      <span>Discord</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        Coming soon
+                      </span>
+                    </>
+                  )}
                 </Button>
               </div>
 
