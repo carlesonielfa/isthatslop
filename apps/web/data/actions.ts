@@ -11,7 +11,7 @@ import {
   sourceScoreCache,
 } from "@repo/database";
 import { eq, and, isNull, sql, desc, asc } from "drizzle-orm";
-import { getCurrentUser } from "@/app/lib/auth.server";
+import { getCurrentUser, isEmailVerified } from "@/app/lib/auth.server";
 import { getSourceChildrenDTO } from "./sources";
 import type { SourceTreeNodeDTO } from "./sources";
 import {
@@ -65,6 +65,14 @@ export async function submitClaim(
       return {
         success: false,
         error: "You must be logged in to submit a claim",
+      };
+    }
+
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before submitting claims",
       };
     }
 
@@ -208,6 +216,14 @@ export async function voteOnClaim(
       return { success: false, error: "You must be logged in to vote" };
     }
 
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before voting",
+      };
+    }
+
     // Check if claim exists and get source ID
     const claimResult = await db
       .select({ id: claims.id, sourceId: claims.sourceId })
@@ -331,6 +347,14 @@ export async function submitClaimComment(
       return { success: false, error: "You must be logged in to comment" };
     }
 
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before commenting",
+      };
+    }
+
     // Validate content
     const contentValidation = validateCommentContent(input.content);
     if (!contentValidation.valid) {
@@ -420,6 +444,14 @@ export async function createSource(
       return {
         success: false,
         error: "You must be logged in to create a source",
+      };
+    }
+
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before creating sources",
       };
     }
 

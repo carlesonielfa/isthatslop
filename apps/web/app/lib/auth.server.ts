@@ -3,6 +3,8 @@ import "server-only";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { auth } from "./auth";
+import { db, user as userTable } from "@repo/database";
+import { eq } from "drizzle-orm";
 
 /**
  * Get the current session on the server side.
@@ -65,3 +67,19 @@ export async function isAdmin(): Promise<boolean> {
   const role = await getUserRole();
   return role === "admin";
 }
+
+/**
+ * Check if the current user's email is verified.
+ * Queries the user table directly rather than relying on session type,
+ * since better-auth's session.user TypeScript type may not expose emailVerified.
+ */
+export const isEmailVerified = cache(async (): Promise<boolean> => {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return false;
+  const [row] = await db
+    .select({ emailVerified: userTable.emailVerified })
+    .from(userTable)
+    .where(eq(userTable.id, currentUser.id))
+    .limit(1);
+  return row?.emailVerified === true;
+});
