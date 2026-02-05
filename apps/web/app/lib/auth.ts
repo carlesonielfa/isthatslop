@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { username } from "better-auth/plugins";
 import { db } from "@repo/database";
+import { sendVerificationEmail, sendResetPasswordEmail } from "./email";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -11,16 +12,21 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
-      // TODO: Replace with Resend integration
-      console.log(`[Auth] Password reset email for ${user.email}: ${url}`);
+      // Fire-and-forget to prevent timing attacks
+      sendResetPasswordEmail(user, url).catch((err) =>
+        console.error("[Auth] Failed to send password reset email:", err)
+      );
     },
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      // TODO: Replace with Resend integration
-      console.log(`[Auth] Verification email for ${user.email}: ${url}`);
+      // Fire-and-forget to prevent timing attacks
+      sendVerificationEmail(user, url).catch((err) =>
+        console.error("[Auth] Failed to send verification email:", err)
+      );
     },
     sendOnSignUp: true,
+    // Note: better-auth uses 24-hour expiry by default for verification tokens
   },
   socialProviders: {
     google: {
@@ -34,6 +40,12 @@ export const auth = betterAuth({
     discord: {
       clientId: process.env.DISCORD_CLIENT_ID || "",
       clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+    },
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google", "github", "discord"],
     },
   },
   plugins: [
