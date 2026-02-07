@@ -78,7 +78,9 @@ export async function GET(request: NextRequest) {
           ),
         ),
       )
-      .orderBy(sql`${sourceScoreCache.recalculationRequestedAt} ASC NULLS FIRST`)
+      .orderBy(
+        sql`${sourceScoreCache.recalculationRequestedAt} ASC NULLS FIRST`,
+      )
       .limit(100);
 
     console.log(`[Cron] Found ${staleScores.length} stale scores to process`);
@@ -130,10 +132,7 @@ export async function GET(request: NextRequest) {
 
         processed++;
       } catch (error) {
-        console.error(
-          `[Cron] Error processing source ${sourceId}:`,
-          error,
-        );
+        console.error(`[Cron] Error processing source ${sourceId}:`, error);
         errors.push(sourceId);
       }
     }
