@@ -14,7 +14,7 @@ export default function ResetPasswordEmail({
     <Layout title="Password Reset">
       <Text
         style={{
-          fontSize: "16px",
+          fontSize: "13px",
           color: "#000000",
           marginTop: 0,
           marginBottom: "16px",
@@ -25,7 +25,7 @@ export default function ResetPasswordEmail({
 
       <Text
         style={{
-          fontSize: "14px",
+          fontSize: "12px",
           color: "#000000",
           marginBottom: "24px",
         }}
@@ -37,13 +37,13 @@ export default function ResetPasswordEmail({
       <Button
         href={resetUrl}
         style={{
-          backgroundColor: "#c0c0c0",
-          border: "3px solid",
-          borderColor: "#ffffff #000000 #000000 #ffffff",
+          backgroundColor: "rgb(127 177 179)",
+          border: "1px solid",
+          borderColor: "#f7f7f7 #606060 #606060 #f7f7f7",
           padding: "10px 24px",
-          fontSize: "14px",
-          fontWeight: "bold",
-          color: "#000000",
+          fontSize: "12px",
+          fontWeight: 500,
+          color: "#f7f7f7",
           textDecoration: "none",
           display: "inline-block",
         }}

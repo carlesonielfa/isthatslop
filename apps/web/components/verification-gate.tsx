@@ -143,6 +143,13 @@ export function VerificationGate({
   const { isVerified, isLoggedIn } = useVerificationCheck();
   const [showPrompt, setShowPrompt] = React.useState(false);
 
+  // Effect to show prompt when user is logged in but not verified
+  React.useEffect(() => {
+    if (!isVerified && isLoggedIn) {
+      setShowPrompt(true);
+    }
+  }, [isVerified, isLoggedIn]);
+
   // Not logged in - render nothing (let auth gate handle this)
   if (!isLoggedIn) {
     return null;
@@ -154,16 +161,14 @@ export function VerificationGate({
   }
 
   // Not verified - show fallback or trigger prompt
-  React.useEffect(() => {
-    if (!isVerified && isLoggedIn) {
-      setShowPrompt(true);
-    }
-  }, [isVerified, isLoggedIn]);
 
   return (
     <>
       {fallback}
-      <VerificationPrompt open={showPrompt} onClose={() => setShowPrompt(false)} />
+      <VerificationPrompt
+        open={showPrompt}
+        onClose={() => setShowPrompt(false)}
+      />
     </>
   );
 }

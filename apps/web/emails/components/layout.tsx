@@ -5,7 +5,6 @@ import {
   Container,
   Section,
   Text,
-  Hr,
 } from "@react-email/components";
 
 interface LayoutProps {
@@ -22,7 +21,7 @@ export default function Layout({
       <Head />
       <Body
         style={{
-          backgroundColor: "#008080",
+          backgroundColor: "rgb(127 177 179)",
           fontFamily: '"MS Sans Serif", Tahoma, Arial, sans-serif',
           margin: 0,
           padding: "40px 0",
@@ -31,8 +30,8 @@ export default function Layout({
         <Container
           style={{
             backgroundColor: "#c0c0c0",
-            border: "3px solid",
-            borderColor: "#ffffff #000000 #000000 #ffffff",
+            border: "1px solid",
+            borderColor: "#f7f7f7 #606060 #606060 #f7f7f7",
             maxWidth: "600px",
             margin: "0 auto",
           }}
@@ -40,7 +39,7 @@ export default function Layout({
           {/* Title Bar */}
           <Section
             style={{
-              backgroundColor: "#000080",
+              backgroundColor: "rgb(127 177 179)",
               padding: "4px 8px",
               display: "flex",
               alignItems: "center",
@@ -68,26 +67,18 @@ export default function Layout({
             {children}
           </Section>
 
-          <Hr
-            style={{
-              border: "none",
-              borderTop: "1px solid #808080",
-              margin: "0 24px",
-            }}
-          />
-
           {/* Footer */}
           <Section
             style={{
-              padding: "16px 24px",
-              backgroundColor: "#c0c0c0",
+              padding: "4px 8px",
+              backgroundColor: "rgb(127 177 179)",
             }}
           >
             <Text
               style={{
                 margin: 0,
                 fontSize: "12px",
-                color: "#000000",
+                color: "#f7f7f7",
                 textAlign: "center",
               }}
             >

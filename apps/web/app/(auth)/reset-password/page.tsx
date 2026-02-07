@@ -71,9 +71,7 @@ function ResetPasswordForm() {
           Reset link expired
         </div>
         <div className="space-y-2">
-          <p className="text-xs">
-            This reset link has expired or is invalid.
-          </p>
+          <p className="text-xs">This reset link has expired or is invalid.</p>
           <p className="text-xs">
             To request a new password reset link, visit the forgot password
             page.
