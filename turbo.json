@@ -10,7 +10,9 @@
     "GITHUB_CLIENT_ID",
     "GITHUB_CLIENT_SECRET",
     "DISCORD_CLIENT_ID",
-    "DISCORD_CLIENT_SECRET"
+    "DISCORD_CLIENT_SECRET",
+    "CRON_SECRET",
+    "NODE_ENV"
   ],
   "tasks": {
     "build": {

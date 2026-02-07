@@ -156,10 +156,27 @@ async function updateSourceScoreCache(sourceId: string): Promise<void> {
     .where(and(eq(claims.sourceId, sourceId), isNull(claims.deletedAt)));
 
   if (claimResults.length === 0) {
-    // No claims, delete the cache entry if it exists
+    // No claims: update to empty state instead of deleting (triggers maintain this row)
     await db
-      .delete(sourceScoreCache)
-      .where(eq(sourceScoreCache.sourceId, sourceId));
+      .insert(sourceScoreCache)
+      .values({
+        sourceId,
+        tier: null,
+        rawScore: null,
+        normalizedScore: null,
+        claimCount: 0,
+        lastCalculatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: sourceScoreCache.sourceId,
+        set: {
+          tier: null,
+          rawScore: null,
+          normalizedScore: null,
+          claimCount: 0,
+          lastCalculatedAt: new Date(),
+        },
+      });
     return;
   }
 
