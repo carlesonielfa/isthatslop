@@ -12,7 +12,8 @@
     "compose:down": "docker compose -f tools/docker-isthatslop-local/compose.yml down",
     "db:generate": "bun -F @repo/database db:generate",
     "db:migrate": "bun -F @repo/database db:migrate",
-    "db:seed": "bun -F @repo/database db:seed"
+    "db:seed": "bun -F @repo/database db:seed",
+    "git:redate": "git stash --include-untracked && NOW=$(date -Iseconds) && FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter 'export GIT_AUTHOR_DATE=$NOW GIT_COMMITTER_DATE=$NOW' origin/main..HEAD && git stash pop"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

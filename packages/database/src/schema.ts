@@ -161,6 +161,33 @@ export const sources = pgTable(
 );
 
 // =============================================================================
+// SOURCE PATHS TABLE (Multi-path junction for hierarchy)
+// =============================================================================
+
+export const sourcePaths = pgTable(
+  "source_paths",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    ancestorId: uuid("ancestor_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    path: text("path").notNull(), // Materialized path ending at this source: "uuid1.uuid2.uuid3"
+    pathType: text("path_type").notNull().default("primary"), // "primary", "subreddit", "user", "category", etc.
+    depth: integer("depth").notNull(), // Depth from root in this particular path
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("source_paths_source_idx").on(table.sourceId),
+    index("source_paths_ancestor_idx").on(table.ancestorId),
+    index("source_paths_path_idx").on(table.path),
+    uniqueIndex("source_paths_source_path_uniq").on(table.sourceId, table.path),
+  ],
+);
+
+// =============================================================================
 // SOURCE SCORE CACHE TABLE
 // =============================================================================
 
@@ -366,6 +393,21 @@ export const sourcesRelations = relations(sources, ({ one, many }) => ({
     references: [sourceScoreCache.sourceId],
   }),
   claims: many(claims),
+  paths: many(sourcePaths, { relationName: "sourcePaths" }),
+  descendantPaths: many(sourcePaths, { relationName: "ancestorPaths" }),
+}));
+
+export const sourcePathsRelations = relations(sourcePaths, ({ one }) => ({
+  source: one(sources, {
+    fields: [sourcePaths.sourceId],
+    references: [sources.id],
+    relationName: "sourcePaths",
+  }),
+  ancestor: one(sources, {
+    fields: [sourcePaths.ancestorId],
+    references: [sources.id],
+    relationName: "ancestorPaths",
+  }),
 }));
 
 export const sourceScoreCacheRelations = relations(

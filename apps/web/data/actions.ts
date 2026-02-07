@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import {
   db,
   sources,
+  sourcePaths,
   claims,
   claimVotes,
   claimComments,
   sourceScoreCache,
 } from "@repo/database";
 import { eq, and, isNull, sql, desc, asc } from "drizzle-orm";
-import { getCurrentUser } from "@/app/lib/auth.server";
+import { getCurrentUser, isEmailVerified } from "@/app/lib/auth.server";
 import { getSourceChildrenDTO } from "./sources";
 import type { SourceTreeNodeDTO } from "./sources";
 import {
@@ -64,6 +65,14 @@ export async function submitClaim(
       return {
         success: false,
         error: "You must be logged in to submit a claim",
+      };
+    }
+
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before submitting claims",
       };
     }
 
@@ -207,6 +216,14 @@ export async function voteOnClaim(
       return { success: false, error: "You must be logged in to vote" };
     }
 
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before voting",
+      };
+    }
+
     // Check if claim exists and get source ID
     const claimResult = await db
       .select({ id: claims.id, sourceId: claims.sourceId })
@@ -330,6 +347,14 @@ export async function submitClaimComment(
       return { success: false, error: "You must be logged in to comment" };
     }
 
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before commenting",
+      };
+    }
+
     // Validate content
     const contentValidation = validateCommentContent(input.content);
     if (!contentValidation.valid) {
@@ -395,7 +420,20 @@ export interface CreateSourceResult {
 }
 
 /**
+ * Helper function to detect unique constraint violation errors
+ */
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as { code: string }).code === "23505"
+  );
+}
+
+/**
  * Create a new source.
+ * Uses database transaction to atomically create source + source_paths entry.
+ * Retries on slug conflicts (concurrent creation with same name under same parent).
  */
 export async function createSource(
   input: CreateSourceInput,
@@ -409,6 +447,14 @@ export async function createSource(
       };
     }
 
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before creating sources",
+      };
+    }
+
     // Validate name
     const nameValidation = validateSourceName(input.name);
     if (!nameValidation.valid) {
@@ -416,103 +462,144 @@ export async function createSource(
     }
 
     // Generate and validate slug
-    const slug = generateSlug(input.name);
-    const slugValidation = validateSlug(slug);
+    const baseSlug = generateSlug(input.name);
+    const slugValidation = validateSlug(baseSlug);
     if (!slugValidation.valid) {
       return { success: false, error: slugValidation.error };
     }
 
-    // Determine parent info
-    let parentId: string | null = null;
-    let path: string;
-    let depth = 0;
+    // Retry loop for slug conflicts
+    let attempts = 0;
+    const maxAttempts = 3;
+    let currentSlug = baseSlug;
 
-    if (input.parentId) {
-      // Verify parent exists
-      const parentResult = await db
-        .select({ id: sources.id, path: sources.path, depth: sources.depth })
-        .from(sources)
-        .where(and(eq(sources.id, input.parentId), isNull(sources.deletedAt)))
-        .limit(1);
+    while (attempts < maxAttempts) {
+      try {
+        const result = await db.transaction(async (tx) => {
+          // Determine parent info
+          let parentId: string | null = null;
+          let parentPath: string = "";
+          let depth = 0;
 
-      if (parentResult.length === 0) {
-        return { success: false, error: "Parent source not found" };
+          if (input.parentId) {
+            // Verify parent exists using transaction handle
+            const parentResult = await tx
+              .select({
+                id: sources.id,
+                path: sources.path,
+                depth: sources.depth,
+              })
+              .from(sources)
+              .where(
+                and(eq(sources.id, input.parentId), isNull(sources.deletedAt)),
+              )
+              .limit(1);
+
+            if (parentResult.length === 0) {
+              throw new Error("Parent source not found");
+            }
+
+            const parent = parentResult[0]!;
+            if (parent.depth >= 5) {
+              throw new Error("Maximum hierarchy depth reached");
+            }
+
+            parentId = parent.id;
+            parentPath = parent.path;
+            depth = parent.depth + 1;
+          }
+
+          // Check for slug conflict within the same parent using transaction handle
+          const slugConflict = await tx
+            .select({ id: sources.id })
+            .from(sources)
+            .where(
+              and(
+                eq(sources.slug, currentSlug),
+                parentId
+                  ? eq(sources.parentId, parentId)
+                  : isNull(sources.parentId),
+                isNull(sources.deletedAt),
+              ),
+            )
+            .limit(1);
+
+          if (slugConflict.length > 0) {
+            throw new Error("A source with this name already exists");
+          }
+
+          // Insert the source using transaction handle
+          const insertResult = await tx
+            .insert(sources)
+            .values({
+              slug: currentSlug,
+              name: input.name.trim(),
+              type: input.type?.trim() || null,
+              description: input.description?.trim() || null,
+              url: input.url?.trim() || null,
+              parentId,
+              path: "placeholder", // Will update after
+              depth,
+              createdByUserId: user.id,
+            })
+            .returning({ id: sources.id });
+
+          const sourceId = insertResult[0]?.id;
+          if (!sourceId) {
+            throw new Error("Failed to create source");
+          }
+
+          // Calculate path with the actual ID
+          const path = parentPath ? `${parentPath}.${sourceId}` : sourceId;
+
+          // Update source path using transaction handle
+          await tx
+            .update(sources)
+            .set({ path })
+            .where(eq(sources.id, sourceId));
+
+          // Insert into source_paths table using transaction handle
+          await tx.insert(sourcePaths).values({
+            sourceId: sourceId,
+            ancestorId: parentId || sourceId, // Root sources are their own ancestor
+            path: path,
+            pathType: "primary",
+            depth: depth,
+          });
+
+          return { sourceId, slug: currentSlug };
+        });
+
+        // Transaction succeeded
+        // Revalidate browse page
+        revalidatePath("/browse");
+        revalidatePath("/");
+
+        return { success: true, sourceId: result.sourceId, slug: result.slug };
+      } catch (error: unknown) {
+        attempts++;
+
+        // Check if it's a unique constraint violation and we have retries left
+        if (isUniqueViolation(error) && attempts < maxAttempts) {
+          // Retry with modified slug
+          currentSlug = `${baseSlug}-${attempts + 1}`;
+          continue;
+        }
+
+        // For all other errors or if we're out of retries, throw
+        if (error instanceof Error) {
+          // Return user-friendly error messages for known error types
+          return { success: false, error: error.message };
+        }
+        throw error;
       }
-
-      const parent = parentResult[0]!;
-      if (parent.depth >= 5) {
-        return { success: false, error: "Maximum hierarchy depth reached" };
-      }
-
-      parentId = parent.id;
-      depth = parent.depth + 1;
-      // Path will be set after we have the source ID
-      path = ""; // Placeholder, will be updated
-    } else {
-      path = ""; // Placeholder for root sources
     }
 
-    // Check for slug conflict within the same parent
-    const slugConflict = await db
-      .select({ id: sources.id })
-      .from(sources)
-      .where(
-        and(
-          eq(sources.slug, slug),
-          parentId ? eq(sources.parentId, parentId) : isNull(sources.parentId),
-          isNull(sources.deletedAt),
-        ),
-      )
-      .limit(1);
-
-    if (slugConflict.length > 0) {
-      return {
-        success: false,
-        error: "A source with this name already exists",
-      };
-    }
-
-    // Insert the source
-    const insertResult = await db
-      .insert(sources)
-      .values({
-        slug,
-        name: input.name.trim(),
-        type: input.type?.trim() || null,
-        description: input.description?.trim() || null,
-        url: input.url?.trim() || null,
-        parentId,
-        path: "placeholder", // Will update after
-        depth,
-        createdByUserId: user.id,
-      })
-      .returning({ id: sources.id });
-
-    const sourceId = insertResult[0]?.id;
-    if (!sourceId) {
-      return { success: false, error: "Failed to create source" };
-    }
-
-    // Update path with the actual ID
-    if (parentId) {
-      const parentResult = await db
-        .select({ path: sources.path })
-        .from(sources)
-        .where(eq(sources.id, parentId))
-        .limit(1);
-      const parentPath = parentResult[0]?.path ?? "";
-      path = parentPath ? `${parentPath}.${sourceId}` : sourceId;
-    } else {
-      path = sourceId;
-    }
-
-    await db.update(sources).set({ path }).where(eq(sources.id, sourceId));
-
-    // Revalidate browse page
-    revalidatePath("/browse");
-    revalidatePath("/");
-
-    return { success: true, sourceId, slug };
+    // This should never be reached, but satisfies TypeScript
+    return {
+      success: false,
+      error: "Failed to create source after multiple attempts",
+    };
   } catch (error) {
     console.error("Error creating source:", error);
     return { success: false, error: "An unexpected error occurred" };

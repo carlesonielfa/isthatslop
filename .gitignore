@@ -32,6 +32,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Planning
+.planning/
+
 # Misc
 .DS_Store
 *.pem
