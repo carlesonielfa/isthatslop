@@ -287,7 +287,79 @@ async function seed() {
   console.log(`✓ Created ${totalSources} sources, ${totalClaims} claims, ${totalVotes} votes\n`);
 
   // ---------------------------------------------------------------------------
-  // 4. Verify expected tier mappings
+  // 4. Calculate and cache scores for test sources
+  // ---------------------------------------------------------------------------
+  console.log("Calculating scores for test sources...");
+
+  for (const mapping of expectedMappings) {
+    if (mapping.claims.length === 0) {
+      // No claims - insert empty state
+      const sourceId = await db
+        .select({ id: schema.sources.id })
+        .from(schema.sources)
+        .where(eq(schema.sources.slug, mapping.slug))
+        .then((rows) => rows[0]?.id);
+
+      if (sourceId) {
+        await db
+          .insert(schema.sourceScoreCache)
+          .values({
+            sourceId,
+            tier: 0,
+            rawScore: "0",
+            normalizedScore: "0",
+            claimCount: 0,
+            lastCalculatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: schema.sourceScoreCache.sourceId,
+            set: {
+              tier: 0,
+              rawScore: "0",
+              normalizedScore: "0",
+              claimCount: 0,
+              lastCalculatedAt: new Date(),
+            },
+          });
+      }
+      continue;
+    }
+
+    const score = calculateSourceScore(mapping.claims);
+    const sourceId = await db
+      .select({ id: schema.sources.id })
+      .from(schema.sources)
+      .where(eq(schema.sources.slug, mapping.slug))
+      .then((rows) => rows[0]?.id);
+
+    if (sourceId) {
+      await db
+        .insert(schema.sourceScoreCache)
+        .values({
+          sourceId,
+          tier: score.tier,
+          rawScore: score.rawScore.toFixed(2),
+          normalizedScore: score.normalizedScore.toFixed(2),
+          claimCount: score.claimCount,
+          lastCalculatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: schema.sourceScoreCache.sourceId,
+          set: {
+            tier: score.tier,
+            rawScore: score.rawScore.toFixed(2),
+            normalizedScore: score.normalizedScore.toFixed(2),
+            claimCount: score.claimCount,
+            lastCalculatedAt: new Date(),
+          },
+        });
+    }
+  }
+
+  console.log("✓ Scores calculated and cached\n");
+
+  // ---------------------------------------------------------------------------
+  // 5. Verify expected tier mappings
   // ---------------------------------------------------------------------------
   console.log("Verifying expected tier mappings...\n");
   console.log("Expected tier mapping:");
