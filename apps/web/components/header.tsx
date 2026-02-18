@@ -25,6 +25,9 @@ import {
   SignInIcon,
   SignOutIcon,
   UserPlusIcon,
+  ClockIcon,
+  FireIcon,
+  WarningIcon,
 } from "@phosphor-icons/react";
 
 function SearchForm({ className }: { className?: string }) {
@@ -111,6 +114,30 @@ function MobileNav() {
             Hall of Shame
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link
+            href="/browse/recently-added"
+            className="flex items-center gap-2"
+          >
+            <ClockIcon className="size-4" />
+            Recently Added
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link
+            href="/browse/most-controversial"
+            className="flex items-center gap-2"
+          >
+            <FireIcon className="size-4" />
+            Most Controversial
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/browse/disputed" className="flex items-center gap-2">
+            <WarningIcon className="size-4" />
+            Disputed
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {isPending ? (
           <DropdownMenuItem disabled>
@@ -170,6 +197,18 @@ function DesktopNav() {
       <span>|</span>
       <Button variant="ghost" size="sm" asChild>
         <Link href="/hall-of-shame">Hall of Shame</Link>
+      </Button>
+      <span>|</span>
+      <Button variant="ghost" size="sm" asChild>
+        <Link href="/browse/recently-added">Recently Added</Link>
+      </Button>
+      <span>|</span>
+      <Button variant="ghost" size="sm" asChild>
+        <Link href="/browse/most-controversial">Most Controversial</Link>
+      </Button>
+      <span>|</span>
+      <Button variant="ghost" size="sm" asChild>
+        <Link href="/browse/disputed">Disputed</Link>
       </Button>
     </nav>
   );
