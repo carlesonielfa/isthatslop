@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq, like } from "drizzle-orm";
-import { calculateSourceScore, scoreToTier } from "@repo/scoring";
+import { calculateSourceScore } from "@repo/scoring";
 import * as schema from "../src/schema.js";
 
 // Load .env from monorepo root
@@ -24,13 +24,11 @@ function deterministicRandom(min: number, max: number): number {
   return Math.floor(rnd * (max - min + 1)) + min;
 }
 
-interface ClaimPattern {
-  impactRange: [number, number];
-  confidenceRange: [number, number];
-  votesRange: [number, number];
-}
-
 // Category definitions with expected claim patterns
+// Ranges are tuned so normalized scores land in the correct tier:
+//   weight = (1 + log(votes + 1)) * impact * confidence
+//   normalizedScore = sum(weights) / sqrt(claimCount)
+// Tier boundaries: <5 (tier 0), 5-15 (tier 1), 15-35 (tier 2), 35-60 (tier 3), >=60 (tier 4)
 const categories = {
   a: {
     name: "Artisanal",
@@ -38,53 +36,53 @@ const categories = {
     count: 5,
     claimCountRange: [0, 2] as [number, number],
     pattern: {
-      impactRange: [1, 2] as [number, number],
+      impactRange: [1, 1] as [number, number],
       confidenceRange: [1, 2] as [number, number],
-      votesRange: [1, 5] as [number, number],
+      votesRange: [1, 3] as [number, number],
     },
   },
   b: {
     name: "Mostly Human",
     expectedTier: 1,
     count: 7,
-    claimCountRange: [2, 4] as [number, number],
+    claimCountRange: [2, 3] as [number, number],
     pattern: {
-      impactRange: [1, 3] as [number, number],
-      confidenceRange: [2, 3] as [number, number],
-      votesRange: [3, 10] as [number, number],
+      impactRange: [2, 2] as [number, number],
+      confidenceRange: [1, 2] as [number, number],
+      votesRange: [2, 2] as [number, number],
     },
   },
   c: {
     name: "Questionable",
     expectedTier: 2,
     count: 8,
-    claimCountRange: [3, 6] as [number, number],
+    claimCountRange: [3, 4] as [number, number],
     pattern: {
-      impactRange: [2, 4] as [number, number],
-      confidenceRange: [3, 4] as [number, number],
-      votesRange: [5, 20] as [number, number],
+      impactRange: [2, 2] as [number, number],
+      confidenceRange: [2, 3] as [number, number],
+      votesRange: [3, 5] as [number, number],
     },
   },
   d: {
     name: "Compromised",
     expectedTier: 3,
     count: 6,
-    claimCountRange: [4, 8] as [number, number],
+    claimCountRange: [3, 5] as [number, number],
     pattern: {
-      impactRange: [3, 5] as [number, number],
-      confidenceRange: [3, 5] as [number, number],
-      votesRange: [10, 30] as [number, number],
+      impactRange: [3, 3] as [number, number],
+      confidenceRange: [3, 3] as [number, number],
+      votesRange: [5, 8] as [number, number],
     },
   },
   e: {
     name: "Slop",
     expectedTier: 4,
     count: 4,
-    claimCountRange: [5, 10] as [number, number],
+    claimCountRange: [4, 8] as [number, number],
     pattern: {
-      impactRange: [4, 5] as [number, number],
-      confidenceRange: [4, 5] as [number, number],
-      votesRange: [20, 100] as [number, number],
+      impactRange: [3, 5] as [number, number],
+      confidenceRange: [3, 5] as [number, number],
+      votesRange: [10, 30] as [number, number],
     },
   },
 };
@@ -118,15 +116,21 @@ async function seed() {
         .where(eq(schema.claims.sourceId, source.id));
 
       for (const claim of claimIds) {
-        await db.delete(schema.claimVotes).where(eq(schema.claimVotes.claimId, claim.id));
+        await db
+          .delete(schema.claimVotes)
+          .where(eq(schema.claimVotes.claimId, claim.id));
       }
 
       // Delete claims
-      await db.delete(schema.claims).where(eq(schema.claims.sourceId, source.id));
+      await db
+        .delete(schema.claims)
+        .where(eq(schema.claims.sourceId, source.id));
     }
 
     // Delete sources
-    await db.delete(schema.sources).where(like(schema.sources.slug, "scoring-test-%"));
+    await db
+      .delete(schema.sources)
+      .where(like(schema.sources.slug, "scoring-test-%"));
     // Delete test users
     await db.delete(schema.user).where(like(schema.user.id, "scoring-test-%"));
     await db.delete(schema.user).where(like(schema.user.id, "scoring-voter-%"));
@@ -185,7 +189,9 @@ async function seed() {
   }> = [];
 
   for (const [categoryKey, category] of Object.entries(categories)) {
-    console.log(`  Creating ${category.count} sources for Category ${categoryKey.toUpperCase()} (${category.name})...`);
+    console.log(
+      `  Creating ${category.count} sources for Category ${categoryKey.toUpperCase()} (${category.name})...`,
+    );
 
     for (let i = 1; i <= category.count; i++) {
       const sourceSlug = `scoring-test-${categoryKey}-${i}`;
@@ -284,7 +290,9 @@ async function seed() {
     }
   }
 
-  console.log(`✓ Created ${totalSources} sources, ${totalClaims} claims, ${totalVotes} votes\n`);
+  console.log(
+    `✓ Created ${totalSources} sources, ${totalClaims} claims, ${totalVotes} votes\n`,
+  );
 
   // ---------------------------------------------------------------------------
   // 4. Calculate and cache scores for test sources
@@ -366,7 +374,9 @@ async function seed() {
 
   for (const mapping of expectedMappings) {
     if (mapping.claims.length === 0) {
-      console.log(`  ${mapping.slug}: no claims -> tier 0 (expected: ${mapping.expectedTier}) ${mapping.expectedTier === 0 ? "OK" : "WARNING"}`);
+      console.log(
+        `  ${mapping.slug}: no claims -> tier 0 (expected: ${mapping.expectedTier}) ${mapping.expectedTier === 0 ? "OK" : "WARNING"}`,
+      );
       continue;
     }
 

@@ -8,6 +8,7 @@ import {
   claims,
   claimVotes,
   claimComments,
+  commentVotes,
   sourceScoreCache,
 } from "@repo/database";
 import { eq, and, isNull, sql, desc, asc } from "drizzle-orm";
@@ -413,6 +414,134 @@ export async function submitClaimComment(
     return { success: true, commentId };
   } catch (error) {
     console.error("Error submitting comment:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export interface VoteOnCommentInput {
+  commentId: string;
+  isHelpful: boolean;
+}
+
+export interface VoteOnCommentResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Vote on a comment (helpful/not helpful).
+ * Atomically updates the denormalized helpfulVotes count on the comment.
+ */
+export async function voteOnComment(
+  input: VoteOnCommentInput,
+): Promise<VoteOnCommentResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: "You must be logged in to vote" };
+    }
+
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before voting",
+      };
+    }
+
+    // Check if comment exists and is not deleted, get claimId for revalidation
+    const commentResult = await db
+      .select({ id: claimComments.id, claimId: claimComments.claimId })
+      .from(claimComments)
+      .where(
+        and(
+          eq(claimComments.id, input.commentId),
+          isNull(claimComments.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (commentResult.length === 0) {
+      return { success: false, error: "Comment not found" };
+    }
+    const comment = commentResult[0]!;
+
+    // Look up the claim to get sourceId for revalidation path
+    const claimResult = await db
+      .select({ id: claims.id, sourceId: claims.sourceId })
+      .from(claims)
+      .where(and(eq(claims.id, comment.claimId), isNull(claims.deletedAt)))
+      .limit(1);
+
+    if (claimResult.length === 0) {
+      return { success: false, error: "Claim not found" };
+    }
+    const claim = claimResult[0]!;
+
+    // Check for existing vote in comment_votes
+    const existingVote = await db
+      .select({ isHelpful: commentVotes.isHelpful })
+      .from(commentVotes)
+      .where(
+        and(
+          eq(commentVotes.commentId, input.commentId),
+          eq(commentVotes.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (existingVote.length > 0) {
+      if (existingVote[0]!.isHelpful === input.isHelpful) {
+        // Idempotent: same vote already exists, do nothing
+      } else {
+        // Different value: update vote and adjust helpfulVotes atomically
+        await db
+          .update(commentVotes)
+          .set({ isHelpful: input.isHelpful })
+          .where(
+            and(
+              eq(commentVotes.commentId, input.commentId),
+              eq(commentVotes.userId, user.id),
+            ),
+          );
+
+        if (input.isHelpful) {
+          // Switched from not helpful to helpful
+          await db
+            .update(claimComments)
+            .set({ helpfulVotes: sql`${claimComments.helpfulVotes} + 1` })
+            .where(eq(claimComments.id, input.commentId));
+        } else {
+          // Switched from helpful to not helpful
+          await db
+            .update(claimComments)
+            .set({ helpfulVotes: sql`${claimComments.helpfulVotes} - 1` })
+            .where(eq(claimComments.id, input.commentId));
+        }
+      }
+    } else {
+      // Insert new vote
+      await db.insert(commentVotes).values({
+        commentId: input.commentId,
+        userId: user.id,
+        isHelpful: input.isHelpful,
+      });
+
+      // Atomically increment helpfulVotes only if isHelpful is true
+      if (input.isHelpful) {
+        await db
+          .update(claimComments)
+          .set({ helpfulVotes: sql`${claimComments.helpfulVotes} + 1` })
+          .where(eq(claimComments.id, input.commentId));
+      }
+    }
+
+    // Revalidate the source page
+    revalidatePath(`/sources/${claim.sourceId}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error voting on comment:", error);
     return { success: false, error: "An unexpected error occurred" };
   }
 }

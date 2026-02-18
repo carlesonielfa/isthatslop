@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { formatTimeAgo } from "@/lib/date";
 import type { ClaimCommentDTO } from "@/data/sources";
-import { submitClaimComment } from "@/data/actions";
+import { submitClaimComment, voteOnComment } from "@/data/actions";
 
 interface ClaimCommentSectionProps {
   claimId: string;
@@ -24,6 +24,8 @@ export function ClaimCommentSection({
   const [content, setContent] = useState("");
   const [isDispute, setIsDispute] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [votingCommentId, setVotingCommentId] = useState<string | null>(null);
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   const disputeCount = comments.filter((comment) => comment.isDispute).length;
 
@@ -59,6 +61,23 @@ export function ClaimCommentSection({
     });
   };
 
+  const handleVoteOnComment = (commentId: string, isHelpful: boolean) => {
+    setVoteError(null);
+    setVotingCommentId(commentId);
+    startTransition(async () => {
+      const result = await voteOnComment({ commentId, isHelpful });
+
+      setVotingCommentId(null);
+
+      if (!result.success) {
+        setVoteError(result.error ?? "Failed to record vote");
+        return;
+      }
+
+      router.refresh();
+    });
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -77,6 +96,7 @@ export function ClaimCommentSection({
               comment.user.displayUsername ||
               comment.user.username ||
               "Anonymous";
+            const isVoting = votingCommentId === comment.id && isPending;
 
             return (
               <div
@@ -107,9 +127,42 @@ export function ClaimCommentSection({
                 <p className="mt-2 text-muted-foreground whitespace-pre-wrap">
                   {comment.content}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-muted-foreground">
+                    +{comment.helpfulVotes} helpful
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={comment.userVote === true ? "default" : "outline"}
+                    disabled={isVoting}
+                    onClick={() => handleVoteOnComment(comment.id, true)}
+                  >
+                    {comment.userVote === true ? "Voted Helpful" : "Helpful"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={
+                      comment.userVote === false ? "destructive" : "outline"
+                    }
+                    disabled={isVoting}
+                    onClick={() => handleVoteOnComment(comment.id, false)}
+                  >
+                    {comment.userVote === false
+                      ? "Voted Not helpful"
+                      : "Not helpful"}
+                  </Button>
+                </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {voteError && (
+        <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-2">
+          {voteError}
         </div>
       )}
 

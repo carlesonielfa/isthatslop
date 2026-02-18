@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { resolve } from "path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, isNotNull, like, sql } from "drizzle-orm";
+import { eq, isNotNull, like } from "drizzle-orm";
 import { calculateSourceScore, tierThresholds } from "@repo/scoring";
 import * as schema from "../src/schema.js";
 
@@ -51,9 +51,7 @@ function createHistogram(scores: number[], buckets: number = 10): void {
     if (i === buckets - 1) {
       bucketLabels.push(`${bucketStart.toFixed(0)}+`);
     } else {
-      bucketLabels.push(
-        `${bucketStart.toFixed(0)}-${bucketEnd.toFixed(0)}`,
-      );
+      bucketLabels.push(`${bucketStart.toFixed(0)}-${bucketEnd.toFixed(0)}`);
     }
   }
 
@@ -66,7 +64,8 @@ function createHistogram(scores: number[], buckets: number = 10): void {
 
   for (let i = 0; i < buckets; i++) {
     const count = bucketCounts[i];
-    const barLength = maxCount > 0 ? Math.round((count / maxCount) * barWidth) : 0;
+    const barLength =
+      maxCount > 0 ? Math.round((count / maxCount) * barWidth) : 0;
     const bar = "█".repeat(barLength);
     const label = bucketLabels[i].padEnd(12);
 
@@ -370,14 +369,15 @@ async function analyzeTierDistribution() {
       console.log(`  Cached tier: ${failure.cachedTier}`);
       console.log(`  Recalculated tier: ${failure.recalcTier}`);
       console.log(`  Normalized score: ${failure.score.toFixed(2)}`);
-      console.log(
-        `  Claim count: ${failure.claims.length}`,
-      );
+      console.log(`  Claim count: ${failure.claims.length}`);
 
       if (failure.claims.length > 0) {
         console.log(`  Claims:`);
         for (const claim of failure.claims) {
-          const weight = (1 + Math.log(claim.helpfulVotes + 1)) * claim.impact * claim.confidence;
+          const weight =
+            (1 + Math.log(claim.helpfulVotes + 1)) *
+            claim.impact *
+            claim.confidence;
           console.log(
             `    - impact=${claim.impact}, confidence=${claim.confidence}, votes=${claim.helpfulVotes}, weight=${weight.toFixed(2)}`,
           );
@@ -406,9 +406,7 @@ async function analyzeTierDistribution() {
   const exitCode = passRate >= 0.8 ? 0 : 1;
 
   if (exitCode === 1) {
-    console.log(
-      "\n⚠ Less than 80% of test sources mapped to expected tiers.",
-    );
+    console.log("\n⚠ Less than 80% of test sources mapped to expected tiers.");
     console.log(
       "   Consider adjusting tier thresholds or seed data claim patterns.",
     );

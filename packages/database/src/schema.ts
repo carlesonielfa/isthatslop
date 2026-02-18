@@ -323,6 +323,28 @@ export const claimComments = pgTable(
 );
 
 // =============================================================================
+// COMMENT VOTES TABLE (Composite Primary Key)
+// =============================================================================
+
+export const commentVotes = pgTable(
+  "comment_votes",
+  {
+    commentId: uuid("comment_id")
+      .notNull()
+      .references(() => claimComments.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    isHelpful: boolean("is_helpful").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commentId, table.userId] }),
+    index("comment_votes_comment_idx").on(table.commentId),
+  ],
+);
+
+// =============================================================================
 // FLAGS TABLE
 // =============================================================================
 
@@ -452,13 +474,28 @@ export const claimVotesRelations = relations(claimVotes, ({ one }) => ({
   }),
 }));
 
-export const claimCommentsRelations = relations(claimComments, ({ one }) => ({
-  claim: one(claims, {
-    fields: [claimComments.claimId],
-    references: [claims.id],
+export const claimCommentsRelations = relations(
+  claimComments,
+  ({ one, many }) => ({
+    claim: one(claims, {
+      fields: [claimComments.claimId],
+      references: [claims.id],
+    }),
+    user: one(user, {
+      fields: [claimComments.userId],
+      references: [user.id],
+    }),
+    votes: many(commentVotes),
+  }),
+);
+
+export const commentVotesRelations = relations(commentVotes, ({ one }) => ({
+  comment: one(claimComments, {
+    fields: [commentVotes.commentId],
+    references: [claimComments.id],
   }),
   user: one(user, {
-    fields: [claimComments.userId],
+    fields: [commentVotes.userId],
     references: [user.id],
   }),
 }));
@@ -491,6 +528,7 @@ export const extendedUserRelations = relations(user, ({ many }) => ({
   claims: many(claims),
   claimVotes: many(claimVotes),
   claimComments: many(claimComments),
+  commentVotes: many(commentVotes),
   flags: many(flags, { relationName: "flagger" }),
   resolvedFlags: many(flags, { relationName: "resolver" }),
   moderationLogs: many(moderationLogs),

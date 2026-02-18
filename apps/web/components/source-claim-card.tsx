@@ -70,7 +70,13 @@ export function SourceClaimCard({ claim, comments }: SourceClaimCardProps) {
   };
 
   return (
-    <div className="p-3 border-b border-border-dark/30 last:border-b-0">
+    <div
+      className={`p-3 border-b last:border-b-0 ${
+        claim.disputeCount > 0
+          ? "border-l-4 border-l-destructive bg-destructive/5 border-b-border-dark/30"
+          : "border-b-border-dark/30"
+      }`}
+    >
       <div className="flex gap-3">
         <UserAvatar
           username={displayName}
