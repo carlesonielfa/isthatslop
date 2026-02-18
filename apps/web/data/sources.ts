@@ -1377,8 +1377,9 @@ export const getDisputedPageDTO = cache(
         const sourceDisputes = db
           .select({
             sourceId: claims.sourceId,
-            disputeCount:
-              sql<number>`COUNT(${claimComments.id})`.as("dispute_count"),
+            disputeCount: sql<number>`COUNT(${claimComments.id})`.as(
+              "dispute_count",
+            ),
           })
           .from(claimComments)
           .innerJoin(claims, eq(claimComments.claimId, claims.id))
