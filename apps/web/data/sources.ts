@@ -963,6 +963,488 @@ export const getSourceClaimsDTO = cache(
   },
 );
 
+// =============================================================================
+// DISCOVERY / BROWSE PAGES DATA ACCESS
+// =============================================================================
+
+export interface DiscoverySourceDTO {
+  id: string;
+  slug: string;
+  name: string;
+  type: string | null;
+  tier: number | null;
+  claimCount: number;
+}
+
+export interface DiscoveryPageDTO<T = DiscoverySourceDTO> {
+  sources: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sort: string;
+}
+
+export interface RecentlyAddedSourceDTO extends DiscoverySourceDTO {
+  createdAt: Date;
+  addedBy: string | null;
+}
+
+export interface ControversialSourceDTO extends DiscoverySourceDTO {
+  controversyScore: number;
+  totalVotes: number;
+}
+
+export interface DisputedSourceDTO extends DiscoverySourceDTO {
+  disputeCount: number;
+}
+
+const DISCOVERY_PAGE_SIZE = 20;
+
+/**
+ * Get recently added sources with pagination.
+ * Sort options: "newest" (default) | "oldest"
+ */
+export const getRecentlyAddedPageDTO = cache(
+  async (
+    requestedPage = 1,
+    sort: "newest" | "oldest" = "newest",
+    pageSize = DISCOVERY_PAGE_SIZE,
+  ): Promise<DiscoveryPageDTO<RecentlyAddedSourceDTO>> => {
+    const fallback: DiscoveryPageDTO<RecentlyAddedSourceDTO> = {
+      sources: [],
+      total: 0,
+      page: 1,
+      pageSize,
+      totalPages: 1,
+      sort,
+    };
+    return safeQuery(
+      async () => {
+        const countResult = await db
+          .select({ count: count() })
+          .from(sources)
+          .where(isNull(sources.deletedAt));
+
+        const total = countResult[0]?.count ?? 0;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const page = Math.min(Math.max(1, requestedPage), totalPages);
+        const offset = (page - 1) * pageSize;
+
+        const orderBy =
+          sort === "oldest"
+            ? [asc(sources.createdAt)]
+            : [desc(sources.createdAt)];
+
+        const result = await db
+          .select({
+            id: sources.id,
+            slug: sources.slug,
+            name: sources.name,
+            type: sources.type,
+            tier: sourceScoreCache.tier,
+            claimCount: sourceScoreCache.claimCount,
+            createdAt: sources.createdAt,
+            addedBy: user.name,
+          })
+          .from(sources)
+          .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+          .leftJoin(user, eq(sources.createdByUserId, user.id))
+          .where(isNull(sources.deletedAt))
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset(offset);
+
+        return {
+          sources: result.map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            name: row.name,
+            type: row.type,
+            tier: row.tier ?? null,
+            claimCount: row.claimCount ?? 0,
+            createdAt: row.createdAt,
+            addedBy: row.addedBy ?? null,
+          })),
+          total,
+          page,
+          pageSize,
+          totalPages,
+          sort,
+        };
+      },
+      fallback,
+      `getRecentlyAddedPageDTO(${requestedPage}, ${sort})`,
+    );
+  },
+);
+
+/**
+ * Get Hall of Shame sources (tier >= 3) with pagination.
+ * Sort options: "tier" (default) | "claims"
+ */
+export const getHallOfShamePageDTO = cache(
+  async (
+    requestedPage = 1,
+    sort: "tier" | "claims" = "tier",
+    pageSize = DISCOVERY_PAGE_SIZE,
+  ): Promise<DiscoveryPageDTO> => {
+    const fallback: DiscoveryPageDTO = {
+      sources: [],
+      total: 0,
+      page: 1,
+      pageSize,
+      totalPages: 1,
+      sort,
+    };
+    return safeQuery(
+      async () => {
+        const whereConditions = and(
+          isNull(sources.deletedAt),
+          sql`${sourceScoreCache.tier} >= 3`,
+        );
+
+        const countResult = await db
+          .select({ count: count() })
+          .from(sources)
+          .innerJoin(
+            sourceScoreCache,
+            eq(sources.id, sourceScoreCache.sourceId),
+          )
+          .where(whereConditions);
+
+        const total = countResult[0]?.count ?? 0;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const page = Math.min(Math.max(1, requestedPage), totalPages);
+        const offset = (page - 1) * pageSize;
+
+        const orderBy =
+          sort === "claims"
+            ? [desc(sourceScoreCache.claimCount), desc(sourceScoreCache.tier)]
+            : [desc(sourceScoreCache.tier), desc(sourceScoreCache.claimCount)];
+
+        const result = await db
+          .select({
+            id: sources.id,
+            slug: sources.slug,
+            name: sources.name,
+            type: sources.type,
+            tier: sourceScoreCache.tier,
+            claimCount: sourceScoreCache.claimCount,
+          })
+          .from(sources)
+          .innerJoin(
+            sourceScoreCache,
+            eq(sources.id, sourceScoreCache.sourceId),
+          )
+          .where(whereConditions)
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset(offset);
+
+        return {
+          sources: result.map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            name: row.name,
+            type: row.type,
+            tier: row.tier ?? null,
+            claimCount: row.claimCount ?? 0,
+          })),
+          total,
+          page,
+          pageSize,
+          totalPages,
+          sort,
+        };
+      },
+      fallback,
+      `getHallOfShamePageDTO(${requestedPage}, ${sort})`,
+    );
+  },
+);
+
+/**
+ * Get Hall of Fame sources (tier <= 1) with pagination.
+ * Sort options: "tier" (default) | "claims"
+ */
+export const getHallOfFamePageDTO = cache(
+  async (
+    requestedPage = 1,
+    sort: "tier" | "claims" = "tier",
+    pageSize = DISCOVERY_PAGE_SIZE,
+  ): Promise<DiscoveryPageDTO> => {
+    const fallback: DiscoveryPageDTO = {
+      sources: [],
+      total: 0,
+      page: 1,
+      pageSize,
+      totalPages: 1,
+      sort,
+    };
+    return safeQuery(
+      async () => {
+        const whereConditions = and(
+          isNull(sources.deletedAt),
+          sql`${sourceScoreCache.tier} <= 1`,
+        );
+
+        const countResult = await db
+          .select({ count: count() })
+          .from(sources)
+          .innerJoin(
+            sourceScoreCache,
+            eq(sources.id, sourceScoreCache.sourceId),
+          )
+          .where(whereConditions);
+
+        const total = countResult[0]?.count ?? 0;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const page = Math.min(Math.max(1, requestedPage), totalPages);
+        const offset = (page - 1) * pageSize;
+
+        const orderBy =
+          sort === "claims"
+            ? [desc(sourceScoreCache.claimCount), asc(sourceScoreCache.tier)]
+            : [asc(sourceScoreCache.tier), desc(sourceScoreCache.claimCount)];
+
+        const result = await db
+          .select({
+            id: sources.id,
+            slug: sources.slug,
+            name: sources.name,
+            type: sources.type,
+            tier: sourceScoreCache.tier,
+            claimCount: sourceScoreCache.claimCount,
+          })
+          .from(sources)
+          .innerJoin(
+            sourceScoreCache,
+            eq(sources.id, sourceScoreCache.sourceId),
+          )
+          .where(whereConditions)
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset(offset);
+
+        return {
+          sources: result.map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            name: row.name,
+            type: row.type,
+            tier: row.tier ?? null,
+            claimCount: row.claimCount ?? 0,
+          })),
+          total,
+          page,
+          pageSize,
+          totalPages,
+          sort,
+        };
+      },
+      fallback,
+      `getHallOfFamePageDTO(${requestedPage}, ${sort})`,
+    );
+  },
+);
+
+/**
+ * Get most controversial sources (most evenly split votes) with pagination.
+ * Sort options: "controversy" (default) | "votes"
+ */
+export const getMostControversialPageDTO = cache(
+  async (
+    requestedPage = 1,
+    sort: "controversy" | "votes" = "controversy",
+    pageSize = DISCOVERY_PAGE_SIZE,
+  ): Promise<DiscoveryPageDTO<ControversialSourceDTO>> => {
+    const fallback: DiscoveryPageDTO<ControversialSourceDTO> = {
+      sources: [],
+      total: 0,
+      page: 1,
+      pageSize,
+      totalPages: 1,
+      sort,
+    };
+    return safeQuery(
+      async () => {
+        const sourceVotes = db
+          .select({
+            sourceId: claims.sourceId,
+            totalHelpful:
+              sql<number>`COALESCE(SUM(${claims.helpfulVotes}), 0)`.as(
+                "total_helpful",
+              ),
+            totalNotHelpful:
+              sql<number>`COALESCE(SUM(${claims.notHelpfulVotes}), 0)`.as(
+                "total_not_helpful",
+              ),
+            totalVotes:
+              sql<number>`COALESCE(SUM(${claims.helpfulVotes} + ${claims.notHelpfulVotes}), 0)`.as(
+                "total_votes",
+              ),
+            controversyScore:
+              sql<number>`LEAST(COALESCE(SUM(${claims.helpfulVotes}), 0), COALESCE(SUM(${claims.notHelpfulVotes}), 0))`.as(
+                "controversy_score",
+              ),
+          })
+          .from(claims)
+          .where(isNull(claims.deletedAt))
+          .groupBy(claims.sourceId)
+          .as("source_votes");
+
+        const countResult = await db
+          .select({ count: count() })
+          .from(sources)
+          .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+          .innerJoin(sourceVotes, eq(sources.id, sourceVotes.sourceId))
+          .where(isNull(sources.deletedAt));
+
+        const total = countResult[0]?.count ?? 0;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const page = Math.min(Math.max(1, requestedPage), totalPages);
+        const offset = (page - 1) * pageSize;
+
+        const orderBy =
+          sort === "votes"
+            ? [desc(sourceVotes.totalVotes)]
+            : [desc(sourceVotes.controversyScore)];
+
+        const result = await db
+          .select({
+            id: sources.id,
+            slug: sources.slug,
+            name: sources.name,
+            type: sources.type,
+            tier: sourceScoreCache.tier,
+            claimCount: sourceScoreCache.claimCount,
+            controversyScore: sourceVotes.controversyScore,
+            totalVotes: sourceVotes.totalVotes,
+          })
+          .from(sources)
+          .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+          .innerJoin(sourceVotes, eq(sources.id, sourceVotes.sourceId))
+          .where(isNull(sources.deletedAt))
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset(offset);
+
+        return {
+          sources: result.map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            name: row.name,
+            type: row.type,
+            tier: row.tier ?? null,
+            claimCount: row.claimCount ?? 0,
+            controversyScore: Number(row.controversyScore),
+            totalVotes: Number(row.totalVotes),
+          })),
+          total,
+          page,
+          pageSize,
+          totalPages,
+          sort,
+        };
+      },
+      fallback,
+      `getMostControversialPageDTO(${requestedPage}, ${sort})`,
+    );
+  },
+);
+
+/**
+ * Get most disputed sources (most dispute comments) with pagination.
+ * Sort: "disputes" (default only)
+ */
+export const getDisputedPageDTO = cache(
+  async (
+    requestedPage = 1,
+    sort = "disputes",
+    pageSize = DISCOVERY_PAGE_SIZE,
+  ): Promise<DiscoveryPageDTO<DisputedSourceDTO>> => {
+    const fallback: DiscoveryPageDTO<DisputedSourceDTO> = {
+      sources: [],
+      total: 0,
+      page: 1,
+      pageSize,
+      totalPages: 1,
+      sort,
+    };
+    return safeQuery(
+      async () => {
+        const sourceDisputes = db
+          .select({
+            sourceId: claims.sourceId,
+            disputeCount:
+              sql<number>`COUNT(${claimComments.id})`.as("dispute_count"),
+          })
+          .from(claimComments)
+          .innerJoin(claims, eq(claimComments.claimId, claims.id))
+          .where(
+            and(
+              eq(claimComments.isDispute, true),
+              isNull(claimComments.deletedAt),
+              isNull(claims.deletedAt),
+            ),
+          )
+          .groupBy(claims.sourceId)
+          .as("source_disputes");
+
+        const countResult = await db
+          .select({ count: count() })
+          .from(sources)
+          .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+          .innerJoin(sourceDisputes, eq(sources.id, sourceDisputes.sourceId))
+          .where(isNull(sources.deletedAt));
+
+        const total = countResult[0]?.count ?? 0;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const page = Math.min(Math.max(1, requestedPage), totalPages);
+        const offset = (page - 1) * pageSize;
+
+        const result = await db
+          .select({
+            id: sources.id,
+            slug: sources.slug,
+            name: sources.name,
+            type: sources.type,
+            tier: sourceScoreCache.tier,
+            claimCount: sourceScoreCache.claimCount,
+            disputeCount: sourceDisputes.disputeCount,
+          })
+          .from(sources)
+          .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+          .innerJoin(sourceDisputes, eq(sources.id, sourceDisputes.sourceId))
+          .where(isNull(sources.deletedAt))
+          .orderBy(desc(sourceDisputes.disputeCount))
+          .limit(pageSize)
+          .offset(offset);
+
+        return {
+          sources: result.map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            name: row.name,
+            type: row.type,
+            tier: row.tier ?? null,
+            claimCount: row.claimCount ?? 0,
+            disputeCount: Number(row.disputeCount),
+          })),
+          total,
+          page,
+          pageSize,
+          totalPages,
+          sort,
+        };
+      },
+      fallback,
+      `getDisputedPageDTO(${requestedPage}, ${sort})`,
+    );
+  },
+);
+
 export const getClaimCommentsDTO = cache(
   async (claimId: string): Promise<ClaimCommentDTO[]> => {
     return safeQuery(
