@@ -454,7 +454,10 @@ export async function voteOnComment(
       .select({ id: claimComments.id, claimId: claimComments.claimId })
       .from(claimComments)
       .where(
-        and(eq(claimComments.id, input.commentId), isNull(claimComments.deletedAt)),
+        and(
+          eq(claimComments.id, input.commentId),
+          isNull(claimComments.deletedAt),
+        ),
       )
       .limit(1);
 

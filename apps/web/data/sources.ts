@@ -8,6 +8,7 @@ import {
   claims,
   claimComments,
   claimVotes,
+  commentVotes,
   user,
 } from "@repo/database";
 import { getCurrentUser } from "@/app/lib/auth.server";
@@ -124,6 +125,7 @@ export interface ClaimCommentDTO {
   helpfulVotes: number;
   createdAt: string;
   isEdited: boolean;
+  userVote: boolean | null; // true = helpful, false = not helpful, null = no vote
   user: {
     id: string;
     username: string | null;
@@ -965,6 +967,9 @@ export const getClaimCommentsDTO = cache(
   async (claimId: string): Promise<ClaimCommentDTO[]> => {
     return safeQuery(
       async () => {
+        // Get current user for vote lookup
+        const currentUser = await getCurrentUser();
+
         const result = await db
           .select({
             id: claimComments.id,
@@ -988,7 +993,34 @@ export const getClaimCommentsDTO = cache(
               isNull(claimComments.deletedAt),
             ),
           )
-          .orderBy(desc(claimComments.createdAt));
+          .orderBy(
+            desc(claimComments.isDispute), // Disputes first (true sorts before false)
+            desc(claimComments.helpfulVotes), // Then by helpfulness
+            desc(claimComments.createdAt), // Then by recency
+          );
+
+        // Batch-fetch current user's votes for all returned comments
+        const commentIds = result.map((r) => r.id);
+        let userVotesMap: Map<string, boolean> = new Map();
+
+        if (currentUser && commentIds.length > 0) {
+          const userVotes = await db
+            .select({
+              commentId: commentVotes.commentId,
+              isHelpful: commentVotes.isHelpful,
+            })
+            .from(commentVotes)
+            .where(
+              and(
+                eq(commentVotes.userId, currentUser.id),
+                inArray(commentVotes.commentId, commentIds),
+              ),
+            );
+
+          userVotesMap = new Map(
+            userVotes.map((v) => [v.commentId, v.isHelpful]),
+          );
+        }
 
         return result.map((row) => ({
           id: row.id,
@@ -998,6 +1030,7 @@ export const getClaimCommentsDTO = cache(
           helpfulVotes: row.helpfulVotes,
           createdAt: row.createdAt.toISOString(),
           isEdited: row.updatedAt.getTime() > row.createdAt.getTime(),
+          userVote: userVotesMap.get(row.id) ?? null,
           user: {
             id: row.userId,
             username: row.username,

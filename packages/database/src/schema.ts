@@ -474,17 +474,20 @@ export const claimVotesRelations = relations(claimVotes, ({ one }) => ({
   }),
 }));
 
-export const claimCommentsRelations = relations(claimComments, ({ one, many }) => ({
-  claim: one(claims, {
-    fields: [claimComments.claimId],
-    references: [claims.id],
+export const claimCommentsRelations = relations(
+  claimComments,
+  ({ one, many }) => ({
+    claim: one(claims, {
+      fields: [claimComments.claimId],
+      references: [claims.id],
+    }),
+    user: one(user, {
+      fields: [claimComments.userId],
+      references: [user.id],
+    }),
+    votes: many(commentVotes),
   }),
-  user: one(user, {
-    fields: [claimComments.userId],
-    references: [user.id],
-  }),
-  votes: many(commentVotes),
-}));
+);
 
 export const commentVotesRelations = relations(commentVotes, ({ one }) => ({
   comment: one(claimComments, {
