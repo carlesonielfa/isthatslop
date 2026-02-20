@@ -145,7 +145,7 @@ export const getPendingFlagsDTO = cache(
           flaggerUsername: user.username,
         })
         .from(flags)
-        .leftJoin(flaggerAlias, eq(flags.userId, flaggerAlias.id))
+        .leftJoin(user, eq(flags.userId, user.id))
         .where(eq(flags.status, "pending"))
         .orderBy(desc(flags.createdAt))
         .limit(pageSize)
