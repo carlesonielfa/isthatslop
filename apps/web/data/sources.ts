@@ -730,6 +730,18 @@ export const getSourceDetailBySlugPathDTO = cache(
       async () => {
         if (slugPath.length === 0) return null;
 
+        const currentUser = await getCurrentUser();
+
+        const approvalCondition = currentUser
+          ? or(
+              eq(sources.approvalStatus, "approved"),
+              and(
+                eq(sources.approvalStatus, "pending"),
+                eq(sources.createdByUserId, currentUser.id),
+              ),
+            )
+          : eq(sources.approvalStatus, "approved");
+
         let parentId: string | null = null;
         let currentId: string | null = null;
 
@@ -744,7 +756,7 @@ export const getSourceDetailBySlugPathDTO = cache(
                   ? eq(sources.parentId, parentId)
                   : isNull(sources.parentId),
                 isNull(sources.deletedAt),
-                eq(sources.approvalStatus, "approved"),
+                approvalCondition,
               ),
             )
             .limit(1);
