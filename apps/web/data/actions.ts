@@ -104,11 +104,11 @@ export async function submitClaim(
       return { success: false, error: contentValidation.error };
     }
 
-    // Check if source exists
+    // Check if source exists and is approved (pending sources cannot receive claims)
     const sourceResult = await db
       .select({ id: sources.id })
       .from(sources)
-      .where(and(eq(sources.id, input.sourceId), isNull(sources.deletedAt)))
+      .where(and(eq(sources.id, input.sourceId), isNull(sources.deletedAt), eq(sources.approvalStatus, "approved")))
       .limit(1);
 
     if (sourceResult.length === 0) {
@@ -678,7 +678,7 @@ export async function createSource(
               })
               .from(sources)
               .where(
-                and(eq(sources.id, input.parentId), isNull(sources.deletedAt)),
+                and(eq(sources.id, input.parentId), isNull(sources.deletedAt), eq(sources.approvalStatus, "approved")),
               )
               .limit(1);
 
@@ -833,7 +833,7 @@ export async function searchSources(
     .from(sources)
     .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
     .where(
-      and(isNull(sources.deletedAt), sql`${sources.name} ILIKE ${searchTerm}`),
+      and(isNull(sources.deletedAt), eq(sources.approvalStatus, "approved"), sql`${sources.name} ILIKE ${searchTerm}`),
     )
     .orderBy(desc(sourceScoreCache.claimCount), asc(sources.name))
     .limit(limit);
