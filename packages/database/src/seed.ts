@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
+import type { ScryptOptions } from "crypto";
 import { Pool } from "pg";
 import { calculateSourceScore } from "@repo/scoring";
 import * as schema from "./schema.js";
@@ -17,12 +17,34 @@ const pool = new Pool({
 
 const db = drizzle(pool, { schema });
 
-const scryptAsync = promisify(scrypt);
+// Manual promisify that preserves the options overload signature
+function scryptAsync(
+  password: string,
+  salt: string,
+  keylen: number,
+  options: ScryptOptions,
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, keylen, options, (err, derivedKey) => {
+      if (err) reject(err);
+      else resolve(derivedKey);
+    });
+  });
+}
 
-// Hash password using scrypt (same as better-auth)
+// Hash password using scrypt matching better-auth's parameters exactly:
+// - NFKC normalization on the password
+// - N: 16384, r: 16, p: 1 (better-auth uses @noble/hashes with these params)
+// - maxmem: 128 * N * r * 2 (same formula better-auth uses)
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
-  const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
+  const normalizedPassword = password.normalize("NFKC");
+  const derivedKey = await scryptAsync(normalizedPassword, salt, 64, {
+    N: 16384,
+    r: 16,
+    p: 1,
+    maxmem: 128 * 16384 * 16 * 2,
+  });
   return `${salt}:${derivedKey.toString("hex")}`;
 }
 
