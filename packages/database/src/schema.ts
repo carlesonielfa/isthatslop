@@ -369,6 +369,9 @@ export const flags = pgTable(
       .on(table.createdAt)
       .where(sql`${table.status} = 'pending'`),
     index("flags_target_idx").on(table.targetType, table.targetId),
+    uniqueIndex("flags_user_target_pending_uniq")
+      .on(table.userId, table.targetType, table.targetId)
+      .where(sql`${table.status} = 'pending'`),
   ],
 );
 

@@ -36,6 +36,13 @@
       "when": 1771581141573,
       "tag": "0004_groovy_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771583956126,
+      "tag": "0005_parallel_makkari",
+      "breakpoints": true
     }
   ]
 }
