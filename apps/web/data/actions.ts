@@ -11,7 +11,7 @@ import {
   commentVotes,
   sourceScoreCache,
 } from "@repo/database";
-import { eq, and, isNull, sql, desc, asc } from "drizzle-orm";
+import { eq, and, isNull, or, sql, desc, asc } from "drizzle-orm";
 import { getCurrentUser, isEmailVerified } from "@/app/lib/auth.server";
 import { getSourceChildrenDTO } from "./sources";
 import type { SourceTreeNodeDTO } from "./sources";
@@ -104,7 +104,8 @@ export async function submitClaim(
       return { success: false, error: contentValidation.error };
     }
 
-    // Check if source exists and is approved (pending sources cannot receive claims)
+    // Check if source exists and is not deleted. Both approved and pending sources
+    // can receive claims — pending sources will carry their claims through to approval.
     const sourceResult = await db
       .select({ id: sources.id })
       .from(sources)
@@ -112,7 +113,10 @@ export async function submitClaim(
         and(
           eq(sources.id, input.sourceId),
           isNull(sources.deletedAt),
-          eq(sources.approvalStatus, "approved"),
+          or(
+            eq(sources.approvalStatus, "approved"),
+            eq(sources.approvalStatus, "pending"),
+          ),
         ),
       )
       .limit(1);
@@ -708,7 +712,7 @@ export async function createSource(
 
           // Check for slug conflict within the same parent using transaction handle
           const slugConflict = await tx
-            .select({ id: sources.id })
+            .select({ id: sources.id, approvalStatus: sources.approvalStatus })
             .from(sources)
             .where(
               and(
@@ -722,6 +726,12 @@ export async function createSource(
             .limit(1);
 
           if (slugConflict.length > 0) {
+            const existing = slugConflict[0]!;
+            if (existing.approvalStatus === "pending") {
+              // Silently use the existing pending source so the user can attach
+              // their claim without knowing it was already submitted by someone else.
+              return { sourceId: existing.id, slug: currentSlug };
+            }
             throw new Error("A source with this name already exists");
           }
 
@@ -819,6 +829,7 @@ export interface SearchSourcesResult {
 
 /**
  * Search sources by name for the claim form autocomplete.
+ * Returns approved sources visible to everyone, plus the current user's own pending sources.
  */
 export async function searchSources(
   query: string,
@@ -828,7 +839,18 @@ export async function searchSources(
     return [];
   }
 
+  const currentUser = await getCurrentUser();
   const searchTerm = `%${query.trim()}%`;
+
+  const approvalCondition = currentUser
+    ? or(
+        eq(sources.approvalStatus, "approved"),
+        and(
+          eq(sources.approvalStatus, "pending"),
+          eq(sources.createdByUserId, currentUser.id),
+        ),
+      )
+    : eq(sources.approvalStatus, "approved");
 
   const results = await db
     .select({
@@ -845,7 +867,7 @@ export async function searchSources(
     .where(
       and(
         isNull(sources.deletedAt),
-        eq(sources.approvalStatus, "approved"),
+        approvalCondition,
         sql`${sources.name} ILIKE ${searchTerm}`,
       ),
     )

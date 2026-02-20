@@ -72,16 +72,6 @@ export function FlagButton({ targetType, targetId }: FlagButtonProps) {
           title="Flag this content"
           aria-label="Flag this content"
           className="text-xs text-gray-500 hover:text-red-600 transition-colors"
-          style={{
-            fontFamily: "var(--font-win95)",
-            cursor: "pointer",
-            border: "2px solid",
-            borderColor: "#fff #808080 #808080 #fff",
-            background: "#c0c0c0",
-            padding: "1px 4px",
-            fontSize: "11px",
-            lineHeight: 1.2,
-          }}
         >
           &#9873;
         </button>
@@ -90,21 +80,8 @@ export function FlagButton({ targetType, targetId }: FlagButtonProps) {
       <DropdownMenuContent
         align="start"
         className="min-w-35 p-0.5 rounded-none"
-        style={{
-          background: "#c0c0c0",
-          border: "2px solid",
-          borderColor: "#fff #808080 #808080 #fff",
-          boxShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-          fontFamily: "var(--font-win95)",
-          fontSize: "11px",
-        }}
       >
-        <DropdownMenuLabel
-          className="text-white px-1 py-0.5 mb-0.5 text-[11px]"
-          style={{ background: "#000080" }}
-        >
-          Flag reason
-        </DropdownMenuLabel>
+        <DropdownMenuLabel>Flag reason</DropdownMenuLabel>
 
         {REASONS.map((r) => (
           <DropdownMenuItem
@@ -114,7 +91,7 @@ export function FlagButton({ targetType, targetId }: FlagButtonProps) {
               e.preventDefault();
               void handleReasonClick(r.value);
             }}
-            className="text-[11px] px-2 py-1 rounded-none hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white"
+            className="text-[11px] px-2 py-1 rounded-none"
             style={{
               fontFamily: "var(--font-win95)",
               cursor: pending ? "wait" : "pointer",

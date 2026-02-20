@@ -12,7 +12,17 @@ import {
   user,
 } from "@repo/database";
 import { getCurrentUser } from "@/app/lib/auth.server";
-import { desc, eq, isNull, count, and, or, sql, asc, inArray } from "drizzle-orm";
+import {
+  desc,
+  eq,
+  isNull,
+  count,
+  and,
+  or,
+  sql,
+  asc,
+  inArray,
+} from "drizzle-orm";
 import { formatTimeAgo } from "@/lib/date";
 
 /**
@@ -650,7 +660,10 @@ export const getSourceDetailByIdDTO = cache(
               eq(sources.approvalStatus, "approved"),
               and(
                 eq(sources.approvalStatus, "pending"),
-                eq(sources.createdByUserId, currentUser.id),
+                or(
+                  eq(sources.createdByUserId, currentUser.id),
+                  sql`EXISTS (SELECT 1 FROM ${claims} WHERE ${claims.sourceId} = ${sources.id} AND ${claims.userId} = ${currentUser.id} AND ${claims.deletedAt} IS NULL)`,
+                ),
               ),
             )
           : eq(sources.approvalStatus, "approved");
@@ -737,7 +750,10 @@ export const getSourceDetailBySlugPathDTO = cache(
               eq(sources.approvalStatus, "approved"),
               and(
                 eq(sources.approvalStatus, "pending"),
-                eq(sources.createdByUserId, currentUser.id),
+                or(
+                  eq(sources.createdByUserId, currentUser.id),
+                  sql`EXISTS (SELECT 1 FROM ${claims} WHERE ${claims.sourceId} = ${sources.id} AND ${claims.userId} = ${currentUser.id} AND ${claims.deletedAt} IS NULL)`,
+                ),
               ),
             )
           : eq(sources.approvalStatus, "approved");

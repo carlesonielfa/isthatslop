@@ -62,11 +62,13 @@ async function seed() {
   console.log("Cleaning existing data...");
   await db.delete(schema.moderationLogs);
   await db.delete(schema.flags);
+  await db.delete(schema.commentVotes);
   await db.delete(schema.claimVotes);
   await db.delete(schema.claimEvidence);
   await db.delete(schema.claimComments);
   await db.delete(schema.claims);
   await db.delete(schema.sourceScoreCache);
+  await db.delete(schema.sourcePaths);
   await db.delete(schema.sources);
   await db.delete(schema.session);
   await db.delete(schema.account);
@@ -498,7 +500,7 @@ async function seed() {
 
   const sources = await db
     .insert(schema.sources)
-    .values(sourcesData)
+    .values(sourcesData.map((s) => ({ ...s, approvalStatus: "approved" })))
     .returning();
 
   console.log(`Created ${sources.length} sources`);
@@ -927,12 +929,24 @@ async function seed() {
   }
 
   if (scoreCacheData.length > 0) {
-    await db.insert(schema.sourceScoreCache).values(
-      scoreCacheData.map((s) => ({
-        ...s,
-        lastCalculatedAt: new Date(),
-      })),
-    );
+    await db
+      .insert(schema.sourceScoreCache)
+      .values(
+        scoreCacheData.map((s) => ({
+          ...s,
+          lastCalculatedAt: new Date(),
+        })),
+      )
+      .onConflictDoUpdate({
+        target: schema.sourceScoreCache.sourceId,
+        set: {
+          tier: sql`excluded.tier`,
+          rawScore: sql`excluded.raw_score`,
+          normalizedScore: sql`excluded.normalized_score`,
+          claimCount: sql`excluded.claim_count`,
+          lastCalculatedAt: sql`excluded.last_calculated_at`,
+        },
+      });
   }
 
   console.log(`Created ${scoreCacheData.length} source score cache entries`);
