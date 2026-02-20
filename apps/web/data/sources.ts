@@ -12,7 +12,7 @@ import {
   user,
 } from "@repo/database";
 import { getCurrentUser } from "@/app/lib/auth.server";
-import { desc, eq, isNull, count, and, sql, asc, inArray } from "drizzle-orm";
+import { desc, eq, isNull, count, and, or, sql, asc, inArray } from "drizzle-orm";
 import { formatTimeAgo } from "@/lib/date";
 
 /**
@@ -643,6 +643,18 @@ export const getSourceDetailByIdDTO = cache(
   async (sourceId: string): Promise<SourceDetailDTO | null> => {
     return safeQuery(
       async () => {
+        const currentUser = await getCurrentUser();
+
+        const approvalCondition = currentUser
+          ? or(
+              eq(sources.approvalStatus, "approved"),
+              and(
+                eq(sources.approvalStatus, "pending"),
+                eq(sources.createdByUserId, currentUser.id),
+              ),
+            )
+          : eq(sources.approvalStatus, "approved");
+
         const result = await db
           .select({
             id: sources.id,
@@ -672,7 +684,7 @@ export const getSourceDetailByIdDTO = cache(
             and(
               eq(sources.id, sourceId),
               isNull(sources.deletedAt),
-              eq(sources.approvalStatus, "approved"),
+              approvalCondition,
             ),
           )
           .limit(1);
