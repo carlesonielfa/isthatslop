@@ -1,13 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import {
-  db,
-  flags,
-  moderationLogs,
-  sources,
-  user,
-} from "@repo/database";
+import { db, flags, moderationLogs, sources, user } from "@repo/database";
 import { eq, desc, count, and, gte } from "drizzle-orm";
 import { formatTimeAgo } from "@/lib/date";
 
@@ -188,11 +182,7 @@ export const getPendingSourcesDTO = cache(
       db
         .select({ total: count() })
         .from(sources)
-        .where(
-          and(
-            eq(sources.approvalStatus, "pending"),
-          ),
-        ),
+        .where(and(eq(sources.approvalStatus, "pending"))),
       db
         .select({
           id: sources.id,
@@ -207,11 +197,7 @@ export const getPendingSourcesDTO = cache(
         })
         .from(sources)
         .leftJoin(user, eq(sources.createdByUserId, user.id))
-        .where(
-          and(
-            eq(sources.approvalStatus, "pending"),
-          ),
-        )
+        .where(and(eq(sources.approvalStatus, "pending")))
         .orderBy(desc(sources.createdAt))
         .limit(pageSize)
         .offset(offset),

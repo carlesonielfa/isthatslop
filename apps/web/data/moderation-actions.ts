@@ -89,10 +89,7 @@ async function getTargetOwnerId(
       .select({ userId: claimComments.userId })
       .from(claimComments)
       .where(
-        and(
-          eq(claimComments.id, targetId),
-          isNull(claimComments.deletedAt),
-        ),
+        and(eq(claimComments.id, targetId), isNull(claimComments.deletedAt)),
       )
       .limit(1);
     return rows[0]?.userId ?? null;
@@ -194,8 +191,7 @@ export async function resolveFlag(
     }
 
     const newStatus = action === "approve" ? "resolved" : "dismissed";
-    const actionLog =
-      action === "approve" ? "resolve_flag" : "dismiss_flag";
+    const actionLog = action === "approve" ? "resolve_flag" : "dismiss_flag";
 
     await db.transaction(async (tx) => {
       // Update flag status
