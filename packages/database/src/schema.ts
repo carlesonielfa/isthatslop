@@ -147,6 +147,7 @@ export const sources = pgTable(
       .notNull()
       .references(() => user.id),
     deletedAt: timestamp("deleted_at"), // Soft delete for audit trail
+    approvalStatus: text("approval_status").default("pending").notNull(), // "pending" | "approved" | "rejected"
     // Note: search_vector would be added via raw SQL migration for full-text search
   },
   (table) => [

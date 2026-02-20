@@ -29,6 +29,13 @@
       "when": 1771315166235,
       "tag": "0003_bored_barracuda",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771581141573,
+      "tag": "0004_groovy_makkari",
+      "breakpoints": true
     }
   ]
 }
