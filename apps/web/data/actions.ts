@@ -25,6 +25,7 @@ import {
   validateSlug,
 } from "@/lib/validation";
 import { calculateSourceScore } from "@/lib/scoring";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 
 /**
  * Server action to fetch children of a source for lazy loading in the browse tree.
@@ -77,6 +78,14 @@ export async function submitClaim(
       };
     }
 
+    const rl = checkRateLimit(`claim:${user.id}`, RATE_LIMITS.CLAIM_SUBMIT);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many claims. Try again in ${rl.retryAfter} seconds.`,
+      };
+    }
+
     // Validate impact
     const impactValidation = validateImpact(input.impact);
     if (!impactValidation.valid) {
@@ -95,11 +104,17 @@ export async function submitClaim(
       return { success: false, error: contentValidation.error };
     }
 
-    // Check if source exists
+    // Check if source exists and is approved (pending sources cannot receive claims)
     const sourceResult = await db
       .select({ id: sources.id })
       .from(sources)
-      .where(and(eq(sources.id, input.sourceId), isNull(sources.deletedAt)))
+      .where(
+        and(
+          eq(sources.id, input.sourceId),
+          isNull(sources.deletedAt),
+          eq(sources.approvalStatus, "approved"),
+        ),
+      )
       .limit(1);
 
     if (sourceResult.length === 0) {
@@ -242,6 +257,14 @@ export async function voteOnClaim(
       };
     }
 
+    const rl = checkRateLimit(`vote:${user.id}`, RATE_LIMITS.VOTE);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many votes. Try again in ${rl.retryAfter} seconds.`,
+      };
+    }
+
     // Check if claim exists and get source ID
     const claimResult = await db
       .select({ id: claims.id, sourceId: claims.sourceId })
@@ -373,6 +396,14 @@ export async function submitClaimComment(
       };
     }
 
+    const rl = checkRateLimit(`comment:${user.id}`, RATE_LIMITS.COMMENT_SUBMIT);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many comments. Try again in ${rl.retryAfter} seconds.`,
+      };
+    }
+
     // Validate content
     const contentValidation = validateCommentContent(input.content);
     if (!contentValidation.valid) {
@@ -446,6 +477,14 @@ export async function voteOnComment(
       return {
         success: false,
         error: "Please verify your email address before voting",
+      };
+    }
+
+    const rl = checkRateLimit(`vote:${user.id}`, RATE_LIMITS.VOTE);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many votes. Try again in ${rl.retryAfter} seconds.`,
       };
     }
 
@@ -601,6 +640,14 @@ export async function createSource(
       };
     }
 
+    const rl = checkRateLimit(`source:${user.id}`, RATE_LIMITS.SOURCE_CREATE);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many sources created. Try again in ${rl.retryAfter} seconds.`,
+      };
+    }
+
     // Validate name
     const nameValidation = validateSourceName(input.name);
     if (!nameValidation.valid) {
@@ -637,7 +684,11 @@ export async function createSource(
               })
               .from(sources)
               .where(
-                and(eq(sources.id, input.parentId), isNull(sources.deletedAt)),
+                and(
+                  eq(sources.id, input.parentId),
+                  isNull(sources.deletedAt),
+                  eq(sources.approvalStatus, "approved"),
+                ),
               )
               .limit(1);
 
@@ -792,7 +843,11 @@ export async function searchSources(
     .from(sources)
     .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
     .where(
-      and(isNull(sources.deletedAt), sql`${sources.name} ILIKE ${searchTerm}`),
+      and(
+        isNull(sources.deletedAt),
+        eq(sources.approvalStatus, "approved"),
+        sql`${sources.name} ILIKE ${searchTerm}`,
+      ),
     )
     .orderBy(desc(sourceScoreCache.claimCount), asc(sources.name))
     .limit(limit);

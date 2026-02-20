@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "flags_user_target_pending_uniq" ON "flags" USING btree ("user_id","target_type","target_id") WHERE "flags"."status" = 'pending';

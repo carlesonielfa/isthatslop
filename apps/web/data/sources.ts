@@ -175,7 +175,12 @@ export const getRecentSourcesDTO = cache(
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
           .leftJoin(user, eq(sources.createdByUserId, user.id))
-          .where(isNull(sources.deletedAt))
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          )
           .orderBy(desc(sources.createdAt))
           .limit(limit);
 
@@ -218,7 +223,12 @@ export const getHallOfFameDTO = cache(
             sourceScoreCache,
             eq(sources.id, sourceScoreCache.sourceId),
           )
-          .where(isNull(sources.deletedAt))
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          )
           .orderBy(sourceScoreCache.tier, desc(sourceScoreCache.claimCount))
           .limit(limit);
 
@@ -257,7 +267,12 @@ export const getHallOfShameDTO = cache(
             sourceScoreCache,
             eq(sources.id, sourceScoreCache.sourceId),
           )
-          .where(isNull(sources.deletedAt))
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          )
           .orderBy(
             desc(sourceScoreCache.tier),
             desc(sourceScoreCache.claimCount),
@@ -289,7 +304,12 @@ export const getSiteStatsDTO = cache(async (): Promise<SiteStatsDTO> => {
         db
           .select({ count: count() })
           .from(sources)
-          .where(isNull(sources.deletedAt)),
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          ),
         db
           .select({ count: count() })
           .from(claims)
@@ -354,7 +374,10 @@ export const getSourcesForBrowseDTO = cache(
           filters.tierMax !== undefined;
 
         // Build filter conditions
-        const filterConditions = [isNull(sources.deletedAt)];
+        const filterConditions = [
+          isNull(sources.deletedAt),
+          eq(sources.approvalStatus, "approved"),
+        ];
 
         if (filters.type) {
           filterConditions.push(eq(sources.type, filters.type));
@@ -445,6 +468,7 @@ export const getSourcesForBrowseDTO = cache(
                 and(
                   sql`${sources.id} = ANY(ARRAY[${sql.raw(ancestorIdArray.map((id) => `'${id}'::uuid`).join(","))}])`,
                   isNull(sources.deletedAt),
+                  eq(sources.approvalStatus, "approved"),
                 ),
               )
               .orderBy(asc(sources.depth), asc(sources.name));
@@ -482,6 +506,7 @@ export const getSourcesForBrowseDTO = cache(
                   and(
                     sql`${sources.parentId} = ANY(ARRAY[${sql.raw(ids.map((id) => `'${id}'::uuid`).join(","))}])`,
                     isNull(sources.deletedAt),
+                    eq(sources.approvalStatus, "approved"),
                   ),
                 )
                 .groupBy(sources.parentId)
@@ -532,7 +557,13 @@ export async function getSourceChildrenDTO(
     })
     .from(sources)
     .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
-    .where(and(eq(sources.parentId, parentId), isNull(sources.deletedAt)))
+    .where(
+      and(
+        eq(sources.parentId, parentId),
+        isNull(sources.deletedAt),
+        eq(sources.approvalStatus, "approved"),
+      ),
+    )
     .orderBy(desc(sourceScoreCache.claimCount), asc(sources.name))
     .limit(limit + 1) // Fetch one extra to check if there are more
     .offset(offset);
@@ -554,6 +585,7 @@ export async function getSourceChildrenDTO(
             and(
               sql`${sources.parentId} = ANY(ARRAY[${sql.raw(ids.map((id) => `'${id}'::uuid`).join(","))}])`,
               isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
             ),
           )
           .groupBy(sources.parentId)
@@ -587,7 +619,13 @@ export const getSourceTypesDTO = cache(async (): Promise<string[]> => {
       const result = await db
         .selectDistinct({ type: sources.type })
         .from(sources)
-        .where(and(isNull(sources.deletedAt), sql`${sources.type} IS NOT NULL`))
+        .where(
+          and(
+            isNull(sources.deletedAt),
+            eq(sources.approvalStatus, "approved"),
+            sql`${sources.type} IS NOT NULL`,
+          ),
+        )
         .orderBy(asc(sources.type));
 
       return result.map((r) => r.type).filter((t): t is string => t !== null);
@@ -630,7 +668,13 @@ export const getSourceDetailByIdDTO = cache(
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
           .leftJoin(user, eq(sources.createdByUserId, user.id))
-          .where(and(eq(sources.id, sourceId), isNull(sources.deletedAt)))
+          .where(
+            and(
+              eq(sources.id, sourceId),
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          )
           .limit(1);
 
         const row = result[0];
@@ -688,6 +732,7 @@ export const getSourceDetailBySlugPathDTO = cache(
                   ? eq(sources.parentId, parentId)
                   : isNull(sources.parentId),
                 isNull(sources.deletedAt),
+                eq(sources.approvalStatus, "approved"),
               ),
             )
             .limit(1);
@@ -728,6 +773,7 @@ export const getSourceBreadcrumbsDTO = cache(
                 ids.map((id) => `'${id}'::uuid`).join(","),
               )}])`,
               isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
             ),
           )
           .orderBy(asc(sources.depth));
@@ -752,7 +798,11 @@ export const getSourceChildrenSummaryDTO = cache(
             .select({ count: count() })
             .from(sources)
             .where(
-              and(eq(sources.parentId, parentId), isNull(sources.deletedAt)),
+              and(
+                eq(sources.parentId, parentId),
+                isNull(sources.deletedAt),
+                eq(sources.approvalStatus, "approved"),
+              ),
             ),
           db
             .select({
@@ -769,7 +819,11 @@ export const getSourceChildrenSummaryDTO = cache(
               eq(sources.id, sourceScoreCache.sourceId),
             )
             .where(
-              and(eq(sources.parentId, parentId), isNull(sources.deletedAt)),
+              and(
+                eq(sources.parentId, parentId),
+                isNull(sources.deletedAt),
+                eq(sources.approvalStatus, "approved"),
+              ),
             )
             .orderBy(desc(sourceScoreCache.claimCount), asc(sources.name))
             .limit(limit),
@@ -800,6 +854,7 @@ export const getSourceChildrenSummaryDTO = cache(
                       ids.map((id) => `'${id}'::uuid`).join(","),
                     )}])`,
                     isNull(sources.deletedAt),
+                    eq(sources.approvalStatus, "approved"),
                   ),
                 )
                 .groupBy(sources.parentId)
@@ -1024,7 +1079,12 @@ export const getRecentlyAddedPageDTO = cache(
         const countResult = await db
           .select({ count: count() })
           .from(sources)
-          .where(isNull(sources.deletedAt));
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          );
 
         const total = countResult[0]?.count ?? 0;
         const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -1050,7 +1110,12 @@ export const getRecentlyAddedPageDTO = cache(
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
           .leftJoin(user, eq(sources.createdByUserId, user.id))
-          .where(isNull(sources.deletedAt))
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          )
           .orderBy(...orderBy)
           .limit(pageSize)
           .offset(offset);
@@ -1101,6 +1166,7 @@ export const getHallOfShamePageDTO = cache(
       async () => {
         const whereConditions = and(
           isNull(sources.deletedAt),
+          eq(sources.approvalStatus, "approved"),
           sql`${sourceScoreCache.tier} >= 3`,
         );
 
@@ -1186,6 +1252,7 @@ export const getHallOfFamePageDTO = cache(
       async () => {
         const whereConditions = and(
           isNull(sources.deletedAt),
+          eq(sources.approvalStatus, "approved"),
           sql`${sourceScoreCache.tier} <= 1`,
         );
 
@@ -1299,7 +1366,12 @@ export const getMostControversialPageDTO = cache(
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
           .innerJoin(sourceVotes, eq(sources.id, sourceVotes.sourceId))
-          .where(isNull(sources.deletedAt));
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          );
 
         const total = countResult[0]?.count ?? 0;
         const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -1325,7 +1397,12 @@ export const getMostControversialPageDTO = cache(
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
           .innerJoin(sourceVotes, eq(sources.id, sourceVotes.sourceId))
-          .where(isNull(sources.deletedAt))
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          )
           .orderBy(...orderBy)
           .limit(pageSize)
           .offset(offset);
@@ -1398,7 +1475,12 @@ export const getDisputedPageDTO = cache(
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
           .innerJoin(sourceDisputes, eq(sources.id, sourceDisputes.sourceId))
-          .where(isNull(sources.deletedAt));
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          );
 
         const total = countResult[0]?.count ?? 0;
         const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -1418,7 +1500,12 @@ export const getDisputedPageDTO = cache(
           .from(sources)
           .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
           .innerJoin(sourceDisputes, eq(sources.id, sourceDisputes.sourceId))
-          .where(isNull(sources.deletedAt))
+          .where(
+            and(
+              isNull(sources.deletedAt),
+              eq(sources.approvalStatus, "approved"),
+            ),
+          )
           .orderBy(desc(sourceDisputes.disputeCount))
           .limit(pageSize)
           .offset(offset);

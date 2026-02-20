@@ -18,6 +18,7 @@ import {
 import { formatTimeAgo } from "@/lib/date";
 import { isUuid, uuidPattern } from "@/lib/validation";
 import { SourceClaimCard } from "@/components/source-claim-card";
+import { FlagButton } from "@/components/flag-button";
 
 const CLAIMS_PER_PAGE = 10;
 const CHILDREN_PREVIEW_LIMIT = 20;
@@ -208,6 +209,7 @@ export default async function SourcePage({
                     + Submit Claim
                   </Link>
                 </Button>
+                <FlagButton targetType="source" targetId={source.id} />
               </div>
             </div>
 

@@ -9,6 +9,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { formatTimeAgo } from "@/lib/date";
 import type { ClaimCommentDTO } from "@/data/sources";
 import { submitClaimComment, voteOnComment } from "@/data/actions";
+import { FlagButton } from "@/components/flag-button";
 
 interface ClaimCommentSectionProps {
   claimId: string;
@@ -153,6 +154,7 @@ export function ClaimCommentSection({
                       ? "Voted Not helpful"
                       : "Not helpful"}
                   </Button>
+                  <FlagButton targetType="comment" targetId={comment.id} />
                 </div>
               </div>
             );

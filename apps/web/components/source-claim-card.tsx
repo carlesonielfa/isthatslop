@@ -12,6 +12,7 @@ import { getConfidenceName, getConfidenceColor } from "@/lib/confidence";
 import type { SourceClaimDTO, ClaimCommentDTO } from "@/data/sources";
 import { voteOnClaim } from "@/data/actions";
 import { ClaimCommentSection } from "@/components/claim-comment-section";
+import { FlagButton } from "@/components/flag-button";
 
 interface SourceClaimCardProps {
   claim: SourceClaimDTO;
@@ -130,7 +131,7 @@ export function SourceClaimCard({ claim, comments }: SourceClaimCardProps) {
               {error}
             </div>
           )}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
@@ -149,6 +150,7 @@ export function SourceClaimCard({ claim, comments }: SourceClaimCardProps) {
             >
               {claim.userVote === false ? "Voted Not helpful" : "Not helpful"}
             </Button>
+            <FlagButton targetType="claim" targetId={claim.id} />
           </div>
           <details className="border-t border-border-dark/40 pt-3">
             <summary className="text-xs text-accent cursor-pointer">
