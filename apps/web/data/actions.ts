@@ -25,6 +25,7 @@ import {
   validateSlug,
 } from "@/lib/validation";
 import { calculateSourceScore } from "@/lib/scoring";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 
 /**
  * Server action to fetch children of a source for lazy loading in the browse tree.
@@ -74,6 +75,14 @@ export async function submitClaim(
       return {
         success: false,
         error: "Please verify your email address before submitting claims",
+      };
+    }
+
+    const rl = checkRateLimit(`claim:${user.id}`, RATE_LIMITS.CLAIM_SUBMIT);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many claims. Try again in ${rl.retryAfter} seconds.`,
       };
     }
 
@@ -242,6 +251,14 @@ export async function voteOnClaim(
       };
     }
 
+    const rl = checkRateLimit(`vote:${user.id}`, RATE_LIMITS.VOTE);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many votes. Try again in ${rl.retryAfter} seconds.`,
+      };
+    }
+
     // Check if claim exists and get source ID
     const claimResult = await db
       .select({ id: claims.id, sourceId: claims.sourceId })
@@ -373,6 +390,14 @@ export async function submitClaimComment(
       };
     }
 
+    const rl = checkRateLimit(`comment:${user.id}`, RATE_LIMITS.COMMENT_SUBMIT);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many comments. Try again in ${rl.retryAfter} seconds.`,
+      };
+    }
+
     // Validate content
     const contentValidation = validateCommentContent(input.content);
     if (!contentValidation.valid) {
@@ -446,6 +471,14 @@ export async function voteOnComment(
       return {
         success: false,
         error: "Please verify your email address before voting",
+      };
+    }
+
+    const rl = checkRateLimit(`vote:${user.id}`, RATE_LIMITS.VOTE);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many votes. Try again in ${rl.retryAfter} seconds.`,
       };
     }
 
@@ -598,6 +631,14 @@ export async function createSource(
       return {
         success: false,
         error: "Please verify your email address before creating sources",
+      };
+    }
+
+    const rl = checkRateLimit(`source:${user.id}`, RATE_LIMITS.SOURCE_CREATE);
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: `Too many sources created. Try again in ${rl.retryAfter} seconds.`,
       };
     }
 
