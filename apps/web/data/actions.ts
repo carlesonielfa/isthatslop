@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   db,
+  user as userTable,
   sources,
   sourcePaths,
   claims,
@@ -11,7 +12,7 @@ import {
   commentVotes,
   sourceScoreCache,
 } from "@repo/database";
-import { eq, and, isNull, or, sql, desc, asc } from "drizzle-orm";
+import { eq, and, isNull, or, sql, desc, asc, count } from "drizzle-orm";
 import { getCurrentUser, isEmailVerified } from "@/app/lib/auth.server";
 import { getSourceChildrenDTO } from "./sources";
 import type { SourceTreeNodeDTO } from "./sources";
@@ -144,6 +145,33 @@ export async function submitClaim(
     const claimId = insertResult[0]?.id;
     if (!claimId) {
       return { success: false, error: "Failed to create claim" };
+    }
+
+    // +1 reputation for submitting a claim (REP-01)
+    await db
+      .update(userTable)
+      .set({ reputation: sql`${userTable.reputation} + 1` })
+      .where(eq(userTable.id, user.id));
+
+    // +5 reputation to source creator when source reaches exactly 5 non-deleted claims (REP-01)
+    const [claimCountResult] = await db
+      .select({ count: count() })
+      .from(claims)
+      .where(and(eq(claims.sourceId, input.sourceId), isNull(claims.deletedAt)));
+
+    if (claimCountResult && claimCountResult.count === 5) {
+      const [sourceRow] = await db
+        .select({ createdByUserId: sources.createdByUserId })
+        .from(sources)
+        .where(eq(sources.id, input.sourceId))
+        .limit(1);
+
+      if (sourceRow?.createdByUserId) {
+        await db
+          .update(userTable)
+          .set({ reputation: sql`${userTable.reputation} + 5` })
+          .where(eq(userTable.id, sourceRow.createdByUserId));
+      }
     }
 
     // Update the source score cache
@@ -347,6 +375,20 @@ export async function voteOnClaim(
           .set({ notHelpfulVotes: sql`${claims.notHelpfulVotes} + 1` })
           .where(eq(claims.id, input.claimId));
       }
+    }
+
+    // +10 reputation when claim reaches exactly 10 helpful votes (REP-01)
+    const [updatedClaim] = await db
+      .select({ helpfulVotes: claims.helpfulVotes, userId: claims.userId })
+      .from(claims)
+      .where(eq(claims.id, input.claimId))
+      .limit(1);
+
+    if (updatedClaim && updatedClaim.helpfulVotes === 10) {
+      await db
+        .update(userTable)
+        .set({ reputation: sql`${userTable.reputation} + 10` })
+        .where(eq(userTable.id, updatedClaim.userId));
     }
 
     // Update source score cache (votes affect claim weight)
@@ -778,6 +820,12 @@ export async function createSource(
         });
 
         // Transaction succeeded
+        // +2 reputation for creating a source (REP-01)
+        await db
+          .update(userTable)
+          .set({ reputation: sql`${userTable.reputation} + 2` })
+          .where(eq(userTable.id, user.id));
+
         // Revalidate browse page
         revalidatePath("/browse");
         revalidatePath("/");

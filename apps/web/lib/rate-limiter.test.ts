@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeEach } from "bun:test";
 import { checkRateLimit, RATE_LIMITS, type RateLimitConfig } from "./rate-limiter";
 
 /**
