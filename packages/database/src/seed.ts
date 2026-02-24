@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
+import type { ScryptOptions } from "crypto";
 import { Pool } from "pg";
 import { calculateSourceScore } from "@repo/scoring";
 import * as schema from "./schema.js";
@@ -17,12 +17,34 @@ const pool = new Pool({
 
 const db = drizzle(pool, { schema });
 
-const scryptAsync = promisify(scrypt);
+// Manual promisify that preserves the options overload signature
+function scryptAsync(
+  password: string,
+  salt: string,
+  keylen: number,
+  options: ScryptOptions,
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, keylen, options, (err, derivedKey) => {
+      if (err) reject(err);
+      else resolve(derivedKey);
+    });
+  });
+}
 
-// Hash password using scrypt (same as better-auth)
+// Hash password using scrypt matching better-auth's parameters exactly:
+// - NFKC normalization on the password
+// - N: 16384, r: 16, p: 1 (better-auth uses @noble/hashes with these params)
+// - maxmem: 128 * N * r * 2 (same formula better-auth uses)
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
-  const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
+  const normalizedPassword = password.normalize("NFKC");
+  const derivedKey = await scryptAsync(normalizedPassword, salt, 64, {
+    N: 16384,
+    r: 16,
+    p: 1,
+    maxmem: 128 * 16384 * 16 * 2,
+  });
   return `${salt}:${derivedKey.toString("hex")}`;
 }
 
@@ -40,11 +62,13 @@ async function seed() {
   console.log("Cleaning existing data...");
   await db.delete(schema.moderationLogs);
   await db.delete(schema.flags);
+  await db.delete(schema.commentVotes);
   await db.delete(schema.claimVotes);
   await db.delete(schema.claimEvidence);
   await db.delete(schema.claimComments);
   await db.delete(schema.claims);
   await db.delete(schema.sourceScoreCache);
+  await db.delete(schema.sourcePaths);
   await db.delete(schema.sources);
   await db.delete(schema.session);
   await db.delete(schema.account);
@@ -476,7 +500,7 @@ async function seed() {
 
   const sources = await db
     .insert(schema.sources)
-    .values(sourcesData)
+    .values(sourcesData.map((s) => ({ ...s, approvalStatus: "approved" })))
     .returning();
 
   console.log(`Created ${sources.length} sources`);
@@ -905,12 +929,24 @@ async function seed() {
   }
 
   if (scoreCacheData.length > 0) {
-    await db.insert(schema.sourceScoreCache).values(
-      scoreCacheData.map((s) => ({
-        ...s,
-        lastCalculatedAt: new Date(),
-      })),
-    );
+    await db
+      .insert(schema.sourceScoreCache)
+      .values(
+        scoreCacheData.map((s) => ({
+          ...s,
+          lastCalculatedAt: new Date(),
+        })),
+      )
+      .onConflictDoUpdate({
+        target: schema.sourceScoreCache.sourceId,
+        set: {
+          tier: sql`excluded.tier`,
+          rawScore: sql`excluded.raw_score`,
+          normalizedScore: sql`excluded.normalized_score`,
+          claimCount: sql`excluded.claim_count`,
+          lastCalculatedAt: sql`excluded.last_calculated_at`,
+        },
+      });
   }
 
   console.log(`Created ${scoreCacheData.length} source score cache entries`);

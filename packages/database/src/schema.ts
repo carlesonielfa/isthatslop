@@ -147,6 +147,7 @@ export const sources = pgTable(
       .notNull()
       .references(() => user.id),
     deletedAt: timestamp("deleted_at"), // Soft delete for audit trail
+    approvalStatus: text("approval_status").default("pending").notNull(), // "pending" | "approved" | "rejected"
     // Note: search_vector would be added via raw SQL migration for full-text search
   },
   (table) => [
@@ -368,6 +369,9 @@ export const flags = pgTable(
       .on(table.createdAt)
       .where(sql`${table.status} = 'pending'`),
     index("flags_target_idx").on(table.targetType, table.targetId),
+    uniqueIndex("flags_user_target_pending_uniq")
+      .on(table.userId, table.targetType, table.targetId)
+      .where(sql`${table.status} = 'pending'`),
   ],
 );
 
