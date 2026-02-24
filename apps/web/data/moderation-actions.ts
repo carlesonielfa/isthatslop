@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import {
   db,
+  user as userTable,
   flags,
   moderationLogs,
   sources,
   claims,
   claimComments,
 } from "@repo/database";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { getCurrentUser, isModerator } from "@/app/lib/auth.server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 
@@ -274,6 +275,39 @@ export async function removeContent(
         targetId,
         reason: reason ?? null,
       });
+
+      // -5 reputation to content owner on moderation removal (REP-01), floor at 0
+      let contentOwnerId: string | null = null;
+
+      if (targetType === "claim") {
+        const [row] = await tx
+          .select({ userId: claims.userId })
+          .from(claims)
+          .where(eq(claims.id, targetId))
+          .limit(1);
+        contentOwnerId = row?.userId ?? null;
+      } else if (targetType === "source") {
+        const [row] = await tx
+          .select({ userId: sources.createdByUserId })
+          .from(sources)
+          .where(eq(sources.id, targetId))
+          .limit(1);
+        contentOwnerId = row?.userId ?? null;
+      } else if (targetType === "comment") {
+        const [row] = await tx
+          .select({ userId: claimComments.userId })
+          .from(claimComments)
+          .where(eq(claimComments.id, targetId))
+          .limit(1);
+        contentOwnerId = row?.userId ?? null;
+      }
+
+      if (contentOwnerId) {
+        await tx
+          .update(userTable)
+          .set({ reputation: sql`GREATEST(0, ${userTable.reputation} - 5)` })
+          .where(eq(userTable.id, contentOwnerId));
+      }
     });
 
     revalidatePath("/mod");
