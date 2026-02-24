@@ -13,6 +13,7 @@ import type { SourceClaimDTO, ClaimCommentDTO } from "@/data/sources";
 import { voteOnClaim } from "@/data/actions";
 import { ClaimCommentSection } from "@/components/claim-comment-section";
 import { FlagButton } from "@/components/flag-button";
+import { ReputationBadge } from "@/components/reputation-badge";
 
 interface SourceClaimCardProps {
   claim: SourceClaimDTO;
@@ -106,6 +107,11 @@ export function SourceClaimCard({ claim, comments }: SourceClaimCardProps) {
             ) : (
               <span className="text-sm font-medium">{displayName}</span>
             )}
+            <ReputationBadge
+              reputation={claim.user.reputation}
+              showScore={false}
+              className="text-xs"
+            />
             <span className="text-xs text-muted-foreground">
               {formatTimeAgo(claim.createdAt)}
               {claim.isEdited && " (edited)"}
