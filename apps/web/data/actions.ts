@@ -130,6 +130,18 @@ export async function submitClaim(
     // This action does not enforce rate limiting or spam prevention; callers or upstream middleware
     // are responsible for limiting abuse (e.g. per-user/per-source rate limits).
 
+    // Count existing non-deleted claims BEFORE insert to detect threshold crossing (REP-01).
+    // Reading before insert means: if preInsertCount === 4, this claim is the one that makes 5.
+    // If the count was already ≥ 5, the threshold was previously hit — no re-award on delete/re-add.
+    // Note: this does not handle the edge case where claims are deleted down below 5 and then
+    // re-added, which would trigger the award again. Tracking that would require a persistent
+    // milestone flag on the source row; skipped intentionally to avoid unnecessary complexity.
+    const [preInsertCountResult] = await db
+      .select({ count: count() })
+      .from(claims)
+      .where(and(eq(claims.sourceId, input.sourceId), isNull(claims.deletedAt)));
+    const preInsertClaimCount = preInsertCountResult?.count ?? 0;
+
     // Insert the claim
     const insertResult = await db
       .insert(claims)
@@ -153,13 +165,10 @@ export async function submitClaim(
       .set({ reputation: sql`${userTable.reputation} + 1` })
       .where(eq(userTable.id, user.id));
 
-    // +5 reputation to source creator when source reaches exactly 5 non-deleted claims (REP-01)
-    const [claimCountResult] = await db
-      .select({ count: count() })
-      .from(claims)
-      .where(and(eq(claims.sourceId, input.sourceId), isNull(claims.deletedAt)));
-
-    if (claimCountResult && claimCountResult.count === 5) {
+    // +5 reputation to source creator when source first reaches 5 non-deleted claims (REP-01)
+    // Only award when crossing from 4 → 5 (preInsertCount === 4). Prevents re-awarding if a
+    // claim is deleted and a new one re-crosses the threshold.
+    if (preInsertClaimCount === 4) {
       const [sourceRow] = await db
         .select({ createdByUserId: sources.createdByUserId })
         .from(sources)
@@ -297,9 +306,12 @@ export async function voteOnClaim(
       };
     }
 
-    // Check if claim exists and get source ID
+    // Check if claim exists and get source ID + current helpfulVotes BEFORE any update.
+    // Pre-reading helpfulVotes lets us detect the 9→10 threshold crossing (REP-01):
+    // if preVoteHelpfulVotes === 9 and this is a helpful vote, it's crossing 10 for the first time
+    // in this direction. Avoids re-awarding when a vote is removed and re-cast.
     const claimResult = await db
-      .select({ id: claims.id, sourceId: claims.sourceId })
+      .select({ id: claims.id, sourceId: claims.sourceId, helpfulVotes: claims.helpfulVotes, userId: claims.userId })
       .from(claims)
       .where(and(eq(claims.id, input.claimId), isNull(claims.deletedAt)))
       .limit(1);
@@ -308,6 +320,7 @@ export async function voteOnClaim(
       return { success: false, error: "Claim not found" };
     }
     const claim = claimResult[0]!;
+    const preVoteHelpfulVotes = claim.helpfulVotes;;
 
     // Check if user already voted on this claim
     const existingVote = await db
@@ -377,18 +390,20 @@ export async function voteOnClaim(
       }
     }
 
-    // +10 reputation when claim reaches exactly 10 helpful votes (REP-01)
-    const [updatedClaim] = await db
-      .select({ helpfulVotes: claims.helpfulVotes, userId: claims.userId })
-      .from(claims)
-      .where(eq(claims.id, input.claimId))
-      .limit(1);
-
-    if (updatedClaim && updatedClaim.helpfulVotes === 10) {
+    // +10 reputation when claim first crosses 10 helpful votes (REP-01)
+    // Only award when crossing from 9 → 10 (preVoteHelpfulVotes === 9 and this is a helpful vote).
+    // Prevents re-awarding if a helpful vote is removed and re-cast.
+    // Note: this does not handle the edge case where votes drop below 10 and climb back up,
+    // which would trigger the award again. Tracking that would require a persistent milestone
+    // flag on the claim row; skipped intentionally to avoid unnecessary complexity.
+    const isAddingHelpfulVote =
+      input.isHelpful &&
+      (existingVote.length === 0 || !existingVote[0]!.isHelpful);
+    if (isAddingHelpfulVote && preVoteHelpfulVotes === 9) {
       await db
         .update(userTable)
         .set({ reputation: sql`${userTable.reputation} + 10` })
-        .where(eq(userTable.id, updatedClaim.userId));
+        .where(eq(userTable.id, claim.userId));
     }
 
     // Update source score cache (votes affect claim weight)
