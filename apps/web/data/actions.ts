@@ -139,7 +139,9 @@ export async function submitClaim(
     const [preInsertCountResult] = await db
       .select({ count: count() })
       .from(claims)
-      .where(and(eq(claims.sourceId, input.sourceId), isNull(claims.deletedAt)));
+      .where(
+        and(eq(claims.sourceId, input.sourceId), isNull(claims.deletedAt)),
+      );
     const preInsertClaimCount = preInsertCountResult?.count ?? 0;
 
     // Insert the claim
@@ -311,7 +313,12 @@ export async function voteOnClaim(
     // if preVoteHelpfulVotes === 9 and this is a helpful vote, it's crossing 10 for the first time
     // in this direction. Avoids re-awarding when a vote is removed and re-cast.
     const claimResult = await db
-      .select({ id: claims.id, sourceId: claims.sourceId, helpfulVotes: claims.helpfulVotes, userId: claims.userId })
+      .select({
+        id: claims.id,
+        sourceId: claims.sourceId,
+        helpfulVotes: claims.helpfulVotes,
+        userId: claims.userId,
+      })
       .from(claims)
       .where(and(eq(claims.id, input.claimId), isNull(claims.deletedAt)))
       .limit(1);
@@ -320,7 +327,7 @@ export async function voteOnClaim(
       return { success: false, error: "Claim not found" };
     }
     const claim = claimResult[0]!;
-    const preVoteHelpfulVotes = claim.helpfulVotes;;
+    const preVoteHelpfulVotes = claim.helpfulVotes;
 
     // Check if user already voted on this claim
     const existingVote = await db
