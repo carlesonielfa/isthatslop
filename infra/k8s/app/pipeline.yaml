@@ -1,0 +1,15 @@
+apiVersion: application.kubero.dev/v1alpha1
+kind: KuberoPipeline
+metadata:
+  name: isthatslop
+  namespace: kubero
+spec:
+  deploymentstrategy: docker
+  phases:
+    - name: production
+      enabled: true
+  github:
+    repository:
+      admin: true
+      clone_url: https://github.com/carlesonielfa/isthatslop.git
+      ssh_url: git@github.com:carlesonielfa/isthatslop.git

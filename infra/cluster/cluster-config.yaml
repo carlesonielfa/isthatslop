@@ -1,0 +1,26 @@
+cluster_name: isthatslop
+kubeconfig_path: "~/.kube/config"
+k3s_version: v1.32.0+k3s1
+
+networking:
+  ssh:
+    port: 22
+    use_agent: false
+    public_key_path: "~/.ssh/id_ed25519.pub"
+    private_key_path: "~/.ssh/id_ed25519"
+  allowed_networks:
+    ssh:
+      - 0.0.0.0/0
+    api:
+      - 0.0.0.0/0
+
+schedule_workloads_on_masters: true
+
+masters_pool:
+  instance_type: cpx22
+  instance_count: 1
+  locations:
+  - nbg1
+
+k3s_args:
+  - --disable=traefik

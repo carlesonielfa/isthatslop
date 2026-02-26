@@ -1,0 +1,228 @@
+apiVersion: application.kubero.dev/v1alpha1
+kind: Kubero
+metadata:
+  name: kubero
+  namespace: kubero
+spec:
+  replicaCount: 1
+
+  persistence:
+    storageClassName: hcloud-volumes
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+
+  image:
+    repository: ghcr.io/kubero-dev/kubero/kubero
+    pullPolicy: Always
+    tag: "latest"
+
+  imagePullSecrets: []
+
+  service:
+    type: ClusterIP
+    port: 2000
+
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: ${KUBERO_DOMAIN}
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - secretName: kubero-tls
+        hosts:
+          - ${KUBERO_DOMAIN}
+
+  # Registry for build pipelines — ghcr.io
+  registry:
+    enabled: true
+    create: false
+    host: ghcr.io/${GITHUB_REGISTRY_USER}
+    account:
+      username: ${GITHUB_REGISTRY_USER}
+      password: ${GITHUB_REGISTRY_PAT}
+      hash: ""  # only needed for self-hosted registry nginx auth, not ghcr.io
+    port: 443
+    storage: 1Gi
+
+  kubero:
+    namespace: kubero
+    context: inClusterContext
+    webhook_url: https://${KUBERO_DOMAIN}/api/repo/webhooks
+    sessionKey: "randomString"  # overridden by kubero-secrets Secret
+    debug: "false"
+    auth:
+      github:
+        enabled: false
+        id: ""
+        secret: ""
+        callbackUrl: ""
+        org: ""
+      oauth2:
+        enabled: false
+        id: ""
+        secret: ""
+        callbackUrl: ""
+        authUrl: ""
+        tokenUrl: ""
+        name: ""
+        scopes: ""
+    config:
+      kubero:
+        readonly: false
+        admin:
+          disabled: false
+        console:
+          enabled: false
+      clusterissuer: letsencrypt-prod
+      templates:
+        enabled: true
+        catalogs:
+          - name: "Kubero"
+            description: "Kubero application catalog"
+            templateBasePath: "https://raw.githubusercontent.com/kubero-dev/kubero/main/services/"
+            index:
+              url: "https://raw.githubusercontent.com/kubero-dev/kubero/main/services/index.json"
+              format: "json"
+      # Pod sizes available when deploying apps
+      podSizeList:
+        - name: small
+          description: "Small - 0.25 CPU, 0.5Gi RAM"
+          default: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+        - name: medium
+          description: "Medium - 1 CPU, 2Gi RAM"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "1000m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+        - name: large
+          description: "Large - 2 CPU, 4Gi RAM"
+          active: false
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "2000m"
+            limits:
+              memory: "4Gi"
+              cpu: "4000m"
+      # Buildpacks for supported language runtimes
+      buildPacks:
+        - name: NodeJS
+          language: JavaScript
+          fetch:
+            repository: ghcr.io/kubero-dev/buildpacks/fetch
+            tag: main
+          build:
+            repository: node
+            tag: latest
+            command: "npm install"
+          run:
+            repository: node
+            tag: latest
+            command: "node index.js"
+          readOnlyAppStorage: false
+        - name: PHP
+          language: PHP
+          fetch:
+            repository: ghcr.io/kubero-dev/buildpacks/fetch
+            tag: main
+          build:
+            repository: composer
+            tag: latest
+            command: "composer install"
+          run:
+            repository: webdevops/php-apache
+            tag: "8.1"
+            command: ""
+          readOnlyAppStorage: false
+        - name: Python
+          language: Python
+          fetch:
+            repository: ghcr.io/kubero-dev/buildpacks/fetch
+            tag: main
+          build:
+            repository: python
+            tag: latest
+            command: "pip install -r requirements.txt"
+          run:
+            repository: python
+            tag: latest
+            command: "python main.py"
+          readOnlyAppStorage: false
+        - name: GoLang
+          language: GoLang
+          fetch:
+            repository: ghcr.io/kubero-dev/buildpacks/fetch
+            tag: main
+          build:
+            repository: golang
+            tag: latest
+            command: "go build -o app"
+          run:
+            repository: golang
+            tag: latest
+            command: "./app"
+          readOnlyAppStorage: false
+        - name: Hugo
+          language: Hugo
+          fetch:
+            repository: ghcr.io/kubero-dev/buildpacks/fetch
+            tag: main
+          build:
+            repository: klakegg/hugo
+            tag: latest
+            command: "hugo"
+          run:
+            repository: nginx
+            tag: latest
+            command: ""
+          readOnlyAppStorage: false
+        - name: Ruby
+          language: Ruby
+          fetch:
+            repository: ghcr.io/kubero-dev/buildpacks/fetch
+            tag: main
+          build:
+            repository: ruby
+            tag: latest
+            command: "bundle install"
+          run:
+            repository: ruby
+            tag: latest
+            command: "ruby app.rb"
+          readOnlyAppStorage: false
+        - name: Static
+          language: HTML
+          fetch:
+            repository: ghcr.io/kubero-dev/buildpacks/fetch
+            tag: main
+          build:
+            repository: alpine
+            tag: latest
+            command: ""
+          run:
+            repository: nginx
+            tag: latest
+            command: ""
+          readOnlyAppStorage: true
+
+  # Prometheus monitoring (enabled - wired to KuberoPrometheus CR)
+  prometheus:
+    enabled: true
+    endpoint: "http://kubero-prometheus-server.kubero.svc.cluster.local"

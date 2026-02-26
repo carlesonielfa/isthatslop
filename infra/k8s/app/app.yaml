@@ -1,0 +1,62 @@
+apiVersion: application.kubero.dev/v1alpha1
+kind: KuberoApp
+metadata:
+  name: isthatslop
+  namespace: isthatslop-production
+spec:
+  name: isthatslop
+  pipeline: isthatslop
+  phase: production
+  deploymentstrategy: docker
+  image:
+    repository: ghcr.io/${GITHUB_REGISTRY_USER}/isthatslop
+    tag: main
+    pullPolicy: Always
+    containerPort: 3000
+    pullSecret: ghcr-auth
+  replicaCount: 1
+  web:
+    replicaCount: 1
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 80
+  podsize:
+    name: small
+    description: "Small (CPU: 0.25, Memory: 0.5Gi)"
+    default: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+  envVars:
+    - name: NODE_ENV
+      value: production
+    - name: PORT
+      value: "3000"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: isthatslop-secrets
+          key: DATABASE_URL
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: ${APP_DOMAIN}
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - secretName: isthatslop-tls
+        hosts:
+          - ${APP_DOMAIN}
+  service:
+    port: 3000
+    type: ClusterIP

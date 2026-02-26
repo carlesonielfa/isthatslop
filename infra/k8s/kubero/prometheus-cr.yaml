@@ -1,0 +1,72 @@
+apiVersion: application.kubero.dev/v1alpha1
+kind: KuberoPrometheus
+metadata:
+  name: kubero-prometheus
+  namespace: kubero
+spec:
+  prometheus:
+    alertmanager:
+      enabled: false
+    kube-state-metrics:
+      enabled: true
+    prometheus-node-exporter:
+      enabled: false
+    prometheus-pushgateway:
+      enabled: false
+    server:
+      enabled: true
+    alerting_rules:
+      groups:
+        - name: kubero
+          rules:
+            - alert: High5xxErrors
+              annotations:
+                description: "High 5xx error rate on {{ $labels.ingress }}"
+                summary: High 5xx error rate
+              expr: |
+                sum(rate(nginx_ingress_controller_requests{status=~"5..",exported_service=~".*-kuberoapp"}[5m])) by (ingress) > 0
+              for: 30s
+              labels:
+                severity: page
+            - alert: High4xxErrors
+              annotations:
+                description: "High 4xx error rate on {{ $labels.ingress }}"
+                summary: High 4xx error rate
+              expr: |
+                sum(rate(nginx_ingress_controller_requests{status=~"4..",exported_service=~".*-kuberoapp"}[5m])) by (ingress)
+                  /
+                sum(rate(nginx_ingress_controller_requests{status=~"2..",exported_service=~".*-kuberoapp"}[5m])) by (ingress) > 0.1
+              for: 30s
+              labels:
+                severity: page
+            - alert: DeploymentReplicas
+              annotations:
+                description: "Deployment {{ $labels.deployment }} replicas not ready"
+                summary: Deployment replicas not ready
+              expr: |
+                kube_deployment_status_replicas_ready{deployment=~".*(web|worker).*"} < kube_deployment_spec_replicas{deployment=~".*(web|worker).*"}
+              for: 30s
+              labels:
+                severity: page
+            - alert: CPUThrottling
+              annotations:
+                description: "CPU limit used by 80% on {{ $labels.container }}"
+                summary: CPU limit used by 80%
+              expr: |
+                sum(rate(container_cpu_usage_seconds_total{namespace=~".*(review|test|stage|production).*"}[5m])) by (container, pod, namespace)
+                  /
+                sum(kube_pod_container_resource_limits{resource="cpu", namespace=~".*(review|test|stage|production).*"}) by (container, pod, namespace) > 0.8
+              for: 30s
+              labels:
+                severity: page
+            - alert: MemoryThrottling
+              annotations:
+                description: "Memory limit used by 80% on {{ $labels.container }}"
+                summary: Memory limit used by 80%
+              expr: |
+                sum(container_memory_usage_bytes{namespace=~".*(review|test|stage|production).*"}) by (container, pod, namespace)
+                  /
+                sum(kube_pod_container_resource_limits{resource="memory", namespace=~".*(review|test|stage|production).*"}) by (container, pod, namespace) > 0.8
+              for: 30s
+              labels:
+                severity: page
