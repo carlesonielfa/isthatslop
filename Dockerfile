@@ -11,20 +11,21 @@ RUN turbo prune web --docker
 FROM base AS installer
 WORKDIR /app
 
-# Install deps from pruned lockfile
 COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/bun.lock ./bun.lock
 RUN bun install --frozen-lockfile
 
 # ---- Builder ----
 FROM base AS builder
 WORKDIR /app
 
-COPY --from=installer /app/node_modules ./node_modules
+COPY --from=installer /app/ .
 COPY --from=pruner /app/out/full/ .
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+ENV SKIP_ENV_VALIDATION=1
 RUN bun run build --filter=web
 
 # ---- Runner ----

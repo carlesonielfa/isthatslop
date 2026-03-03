@@ -10,10 +10,8 @@ config({ path: resolve(__dirname, "../../.env") });
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  outputFileTracingRoot: resolve(__dirname, "../../"),
   transpilePackages: ["@repo/database", "@repo/scoring"],
-  experimental: {
-    outputFileTracingRoot: resolve(__dirname, "../../"),
-  },
 };
 
 export default nextConfig;

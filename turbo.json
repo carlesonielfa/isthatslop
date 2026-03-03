@@ -13,7 +13,8 @@
     "DISCORD_CLIENT_SECRET",
     "RESEND_API_KEY",
     "CRON_SECRET",
-    "NODE_ENV"
+    "NODE_ENV",
+    "SKIP_ENV_VALIDATION"
   ],
   "tasks": {
     "build": {

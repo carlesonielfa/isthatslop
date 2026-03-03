@@ -3,7 +3,11 @@ import { env } from "./env";
 import VerificationEmail from "../../emails/verification";
 import ResetPasswordEmail from "../../emails/reset-password";
 
-const resend = new Resend(env.RESEND_API_KEY);
+let _resend: Resend | undefined;
+const getResend = () => {
+  if (!_resend) _resend = new Resend(env.RESEND_API_KEY);
+  return _resend;
+};
 
 // TODO: Change to noreply@isthatslop.com when domain is verified in Resend
 // For development, use Resend's test address: onboarding@resend.dev
@@ -14,7 +18,7 @@ export async function sendVerificationEmail(
   url: string,
 ): Promise<void> {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM_ADDRESS,
       to: user.email,
       subject: "Verify your email - IsThatSlop.com",
@@ -34,7 +38,7 @@ export async function sendResetPasswordEmail(
   url: string,
 ): Promise<void> {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM_ADDRESS,
       to: user.email,
       subject: "Reset your password - IsThatSlop.com",
