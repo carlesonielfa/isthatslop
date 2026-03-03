@@ -7,6 +7,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "compose:up": "docker compose -f tools/docker-isthatslop-local/compose.yml up -d",
     "compose:down": "docker compose -f tools/docker-isthatslop-local/compose.yml down",
@@ -16,7 +17,10 @@
     "db:triggers": "bun -F @repo/database db:triggers",
     "db:seed-scoring": "bun -F @repo/database db:seed-scoring",
     "db:tune-thresholds": "bun -F @repo/database db:tune-thresholds",
-    "git:redate": "git stash --include-untracked && NOW=$(date -Iseconds) && FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter 'export GIT_AUTHOR_DATE=$NOW GIT_COMMITTER_DATE=$NOW' origin/main..HEAD && git stash pop"
+    "git:redate": "git stash --include-untracked && NOW=$(date -Iseconds) && FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter 'export GIT_AUTHOR_DATE=$NOW GIT_COMMITTER_DATE=$NOW' origin/main..HEAD && git stash pop",
+    "infra:apply": "bash infra/scripts/apply.sh",
+    "infra:bootstrap": "bash infra/scripts/bootstrap.sh",
+    "infra:sync-secrets": "bash infra/scripts/sync-secrets.sh"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

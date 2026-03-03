@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/isthatslop:main
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/isthatslop:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/isthatslop:cache,mode=max
+
+      - name: Deploy to cluster
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_DATA" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl rollout restart deployment/isthatslop -n isthatslop-production
+          kubectl rollout status deployment/isthatslop -n isthatslop-production --timeout=120s

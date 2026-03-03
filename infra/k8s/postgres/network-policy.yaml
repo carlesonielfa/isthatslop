@@ -1,0 +1,20 @@
+# Only allow ingress to postgres from the isthatslop-production namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-allow-app
+  namespace: postgres
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: isthatslop-production
+      ports:
+        - protocol: TCP
+          port: 5432

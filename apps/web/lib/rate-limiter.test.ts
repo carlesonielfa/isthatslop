@@ -1,5 +1,9 @@
 import { describe, test, expect, beforeEach } from "bun:test";
-import { checkRateLimit, RATE_LIMITS, type RateLimitConfig } from "./rate-limiter";
+import {
+  checkRateLimit,
+  RATE_LIMITS,
+  type RateLimitConfig,
+} from "./rate-limiter";
 
 /**
  * Bun's module cache means the module-level `store` Map is shared across all

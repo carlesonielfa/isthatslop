@@ -38,3 +38,6 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Infra secrets (never commit these)
+.env.prod
