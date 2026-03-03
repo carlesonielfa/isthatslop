@@ -23,7 +23,7 @@ spec:
       containers:
         - name: isthatslop
           image: ghcr.io/${GITHUB_REGISTRY_USER}/isthatslop:main
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
           envFrom:
@@ -34,6 +34,20 @@ spec:
               value: production
             - name: PORT
               value: "3000"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
           resources:
             requests:
               cpu: 250m

@@ -10,7 +10,7 @@ controller:
     type: ClusterIP
   ingressClassResource:
     default: true
-  # Expose Prometheus metrics - required for kubero monitoring
+  # Expose Prometheus metrics for observability
   metrics:
     enabled: true
     port: 10254

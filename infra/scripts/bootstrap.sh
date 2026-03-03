@@ -50,7 +50,7 @@ for port in 80 443; do
 done
 
 echo "==> 2. Installing metrics-server..."
-kubectl apply -f "$INFRA_DIR/k8s/kubero/metrics-server.yaml"
+kubectl apply -f "$INFRA_DIR/k8s/metrics-server/metrics-server.yaml"
 kubectl wait --for=condition=available deployment/metrics-server -n kube-system --timeout=120s
 
 echo "==> 3. Installing ingress-nginx..."
@@ -71,6 +71,7 @@ envsubst < "$INFRA_DIR/k8s/cert-manager/cluster-issuer.yaml" | kubectl apply -f 
 
 echo "==> 5. Deploying PostgreSQL..."
 envsubst < "$INFRA_DIR/k8s/postgres/postgres.yaml" | kubectl apply -f -
+kubectl apply -f "$INFRA_DIR/k8s/postgres/network-policy.yaml"
 
 echo "==> 6. Deploying app..."
 envsubst < "$INFRA_DIR/k8s/app/app.yaml" | kubectl apply -f -

@@ -1,5 +1,4 @@
-# Kubero's fork of metrics-server with --kubelet-insecure-tls for k3s compatibility.
-# Source: https://raw.githubusercontent.com/kubero-dev/kubero-operator/main/deploy/metrics-server.yaml
+# metrics-server with --kubelet-insecure-tls for k3s compatibility.
 apiVersion: v1
 kind: ServiceAccount
 metadata:

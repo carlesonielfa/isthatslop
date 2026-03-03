@@ -2,7 +2,7 @@
 set -euo pipefail
 # Apply a YAML manifest with environment variable substitution from infra/.env
 # Usage: bash infra/scripts/apply.sh <manifest-path>
-# Example: bun run infra:apply infra/k8s/kubero/kubero-cr.yaml
+# Example: bun run infra:apply infra/k8s/app/app.yaml
 
 if [ -z "${1-}" ]; then
   echo "Usage: $0 <manifest-path>"
