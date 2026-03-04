@@ -17,11 +17,18 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+# Variables to exclude from the Kubernetes secret (managed separately, e.g. via operators)
+EXCLUDE_VARS=(DATABASE_URL)
+
 # Build --from-literal args from every non-comment, non-empty line in .env.prod
 FROM_LITERALS=()
-while IFS= read -r line; do
+while IFS= read -r line || [[ -n "$line" ]]; do
   [[ "$line" =~ ^[[:space:]]*# ]] && continue
   [[ -z "${line// }" ]] && continue
+  key="${line%%=*}"
+  for exclude in "${EXCLUDE_VARS[@]}"; do
+    [[ "$key" == "$exclude" ]] && continue 2
+  done
   FROM_LITERALS+=(--from-literal="$line")
 done < "$ENV_FILE"
 

@@ -20,6 +20,21 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-auth
+      initContainers:
+        - name: db-migrate
+          image: ghcr.io/${GITHUB_REGISTRY_USER}/isthatslop:main
+          imagePullPolicy: Always
+          command: ["bunx", "drizzle-kit", "migrate", "--config", "packages/database/drizzle.config.ts"]
+          envFrom:
+            - secretRef:
+                name: isthatslop-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
       containers:
         - name: isthatslop
           image: ghcr.io/${GITHUB_REGISTRY_USER}/isthatslop:main

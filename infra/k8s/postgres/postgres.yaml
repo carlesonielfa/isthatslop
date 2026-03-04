@@ -51,13 +51,13 @@ spec:
                 name: postgres-credentials
           livenessProbe:
             exec:
-              command: [pg_isready, -U, postgres]
+              command: [sh, -c, "pg_isready -U $POSTGRES_USER"]
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             exec:
-              command: [pg_isready, -U, postgres]
+              command: [sh, -c, "pg_isready -U $POSTGRES_USER"]
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3
