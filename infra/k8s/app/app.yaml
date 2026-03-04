@@ -22,9 +22,8 @@ spec:
         - name: ghcr-auth
       initContainers:
         - name: db-migrate
-          image: ghcr.io/${GITHUB_REGISTRY_USER}/isthatslop:main
+          image: ghcr.io/${GITHUB_REGISTRY_USER}/isthatslop:main-migrator
           imagePullPolicy: Always
-          command: ["bunx", "drizzle-kit", "migrate", "--config", "packages/database/drizzle.config.ts"]
           envFrom:
             - secretRef:
                 name: isthatslop-secrets
