@@ -546,16 +546,7 @@ export function ClaimSubmissionForm({
 
                 {/* Submit */}
                 <div className="flex gap-2 pt-2">
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={
-                      isPending ||
-                      impact === null ||
-                      confidence === null ||
-                      content.length < 100
-                    }
-                  >
+                  <Button type="submit" className="flex-1" disabled={isPending}>
                     {isPending ? "Submitting..." : "Submit Claim"}
                   </Button>
                 </div>

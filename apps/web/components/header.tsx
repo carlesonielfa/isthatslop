@@ -13,7 +13,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserMenu } from "@/components/user-menu";
+import { SourceSearch } from "@/components/source-search";
 import { authClient, useSession } from "@/app/lib/auth.client";
+import { type SearchSourcesResult } from "@/data/actions";
 import {
   HouseIcon,
   FolderOpenIcon,
@@ -65,11 +67,20 @@ function SearchForm({ className }: { className?: string }) {
 function MobileNav() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const [mobileSearchValue, setMobileSearchValue] =
+    useState<SearchSourcesResult | null>(null);
 
   async function handleSignOut() {
     await authClient.signOut();
     router.push("/");
     router.refresh();
+  }
+
+  function handleMobileSourceSelect(source: SearchSourcesResult | null) {
+    if (source) {
+      setMobileSearchValue(null);
+      router.push(`/sources/${source.slug}`);
+    }
   }
 
   const user = session?.user as
@@ -88,9 +99,13 @@ function MobileNav() {
           Start
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
+      <DropdownMenuContent align="start" className="w-64">
         <div className="px-2 py-2" onKeyDown={(e) => e.stopPropagation()}>
-          <SearchForm className="w-full" />
+          <SourceSearch
+            value={mobileSearchValue}
+            onChange={handleMobileSourceSelect}
+            placeholder="Search sources..."
+          />
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
