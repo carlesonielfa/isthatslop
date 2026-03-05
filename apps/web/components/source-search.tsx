@@ -2,8 +2,8 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { TierBadge } from "@/components/tier-badge";
 import { cn } from "@/lib/utils";
+import { getTierColor } from "@/lib/tiers";
 import { searchSources, type SearchSourcesResult } from "@/data/actions";
 
 const DEBOUNCE_DELAY_MS = 300;
@@ -11,16 +11,20 @@ interface SourceSearchProps {
   value: SearchSourcesResult | null;
   onChange: (source: SearchSourcesResult | null) => void;
   onCreateNew?: (query: string) => void;
+  onSubmit?: (query: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  className?: string;
 }
 
 export function SourceSearch({
   value,
   onChange,
   onCreateNew,
+  onSubmit,
   disabled,
   placeholder = "Search for a source...",
+  className,
 }: SourceSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchSourcesResult[]>([]);
@@ -124,11 +128,15 @@ export function SourceSearch({
             highlightedIndex <= results.length
           ) {
             handleSelect(results[highlightedIndex - 1]!);
+          } else if (highlightedIndex === -1 && onSubmit && query.trim()) {
+            onSubmit(query.trim());
           }
         } else {
           // No create option, indices map directly to results
           if (highlightedIndex >= 0 && highlightedIndex < results.length) {
             handleSelect(results[highlightedIndex]!);
+          } else if (highlightedIndex === -1 && onSubmit && query.trim()) {
+            onSubmit(query.trim());
           }
         }
         break;
@@ -183,7 +191,7 @@ export function SourceSearch({
     isOpen && (results.length > 0 || (onCreateNew && query.trim().length >= 2));
 
   return (
-    <div className="relative">
+    <div className={cn("relative", className)}>
       <Input
         ref={inputRef}
         type="text"
@@ -194,13 +202,14 @@ export function SourceSearch({
         onBlur={handleBlur}
         placeholder={placeholder}
         disabled={disabled}
+        className="text-foreground"
         autoComplete="off"
         aria-autocomplete="list"
         aria-expanded={showDropdown}
         aria-haspopup="listbox"
       />
       {isSearching && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-2xs text-muted-foreground">
           Searching...
         </div>
       )}
@@ -208,7 +217,7 @@ export function SourceSearch({
       {showDropdown && (
         <div
           ref={listRef}
-          className="absolute z-50 w-full mt-1 bg-card border border-border-dark shadow-md"
+          className="absolute z-50 w-full max-w-[calc(100vw-2rem)] mt-1 bg-popover text-popover-foreground ring-foreground/10 ring-1 shadow-md overflow-hidden"
           role="listbox"
         >
           {/* Create new option - always at top when available */}
@@ -218,14 +227,14 @@ export function SourceSearch({
               onClick={handleCreateNew}
               onMouseEnter={() => setHighlightedIndex(0)}
               className={cn(
-                "w-full px-3 py-2 text-left flex items-center gap-2 text-accent border-b border-border-dark bg-muted/30",
-                highlightedIndex === 0 && "bg-muted",
+                "w-full px-2 py-1.5 text-left flex items-center gap-2 text-accent border-b border-border-dark/30",
+                highlightedIndex === 0 && "bg-accent text-accent-foreground",
               )}
               role="option"
               aria-selected={highlightedIndex === 0}
             >
-              <span className="text-lg font-bold">+</span>
-              <span className="text-sm font-medium">
+              <span className="text-sm font-bold">+</span>
+              <span className="text-xs font-medium">
                 Create &quot;{query.trim()}&quot; as new source
               </span>
             </button>
@@ -243,19 +252,25 @@ export function SourceSearch({
                   onClick={() => handleSelect(source)}
                   onMouseEnter={() => setHighlightedIndex(adjustedIndex)}
                   className={cn(
-                    "w-full px-3 py-2 text-left flex items-center gap-2 border-b border-border-dark/30 last:border-b-0",
-                    highlightedIndex === adjustedIndex && "bg-muted",
+                    "w-full px-2 py-1.5 text-left flex items-center gap-2 border-b border-border-dark/30 last:border-b-0",
+                    highlightedIndex === adjustedIndex &&
+                      "bg-accent text-accent-foreground",
                   )}
                   role="option"
                   aria-selected={highlightedIndex === adjustedIndex}
                 >
-                  <TierBadge tier={source.tier} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm truncate">{source.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {source.type && <span>{source.type} · </span>}
-                      {source.claimCount} claims
-                    </div>
+                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                    <span
+                      className="text-2xs md:text-xs font-medium text-white px-1 py-0.5 shrink-0"
+                      style={{ backgroundColor: getTierColor(source.tier) }}
+                    >
+                      {source.name}
+                    </span>
+                    {source.type && (
+                      <span className="text-2xs md:text-xs text-muted-foreground truncate">
+                        {source.type} · {source.claimCount} claims
+                      </span>
+                    )}
                   </div>
                 </button>
               );
@@ -266,7 +281,7 @@ export function SourceSearch({
             !isSearching &&
             query.trim().length >= 2 &&
             !onCreateNew && (
-              <div className="px-3 py-2 text-sm text-muted-foreground">
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
                 No sources found
               </div>
             )}

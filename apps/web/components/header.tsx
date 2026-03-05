@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +20,6 @@ import {
   FolderOpenIcon,
   TrophyIcon,
   SkullIcon,
-  MagnifyingGlassIcon,
   ListIcon,
   UserIcon,
   SignInIcon,
@@ -32,35 +30,31 @@ import {
   WarningIcon,
 } from "@phosphor-icons/react";
 
-function SearchForm({ className }: { className?: string }) {
+function DesktopSearch() {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const [searchValue, setSearchValue] = useState<SearchSourcesResult | null>(
+    null,
+  );
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (query.trim()) {
-      router.push(`/browse?q=${encodeURIComponent(query.trim())}`);
-    } else {
-      router.push("/browse");
+  function handleSourceSelect(source: SearchSourcesResult | null) {
+    if (source) {
+      setSearchValue(null);
+      router.push(`/sources/${source.slug}`);
     }
   }
 
+  function handleSubmit(query: string) {
+    router.push(`/browse?q=${encodeURIComponent(query)}`);
+  }
+
   return (
-    <form onSubmit={handleSubmit} className={className}>
-      <div className="flex items-center gap-1">
-        <Input
-          type="search"
-          placeholder="Search..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 min-w-0 w-32 lg:w-48 text-foreground"
-        />
-        <Button type="submit" size="icon-sm" variant="secondary">
-          <MagnifyingGlassIcon className="size-4" />
-          <span className="sr-only">Search</span>
-        </Button>
-      </div>
-    </form>
+    <SourceSearch
+      value={searchValue}
+      onChange={handleSourceSelect}
+      onSubmit={handleSubmit}
+      placeholder="Search..."
+      className="w-32 lg:w-48"
+    />
   );
 }
 
@@ -99,7 +93,10 @@ function MobileNav() {
           Start
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
+      <DropdownMenuContent
+        align="start"
+        className="w-[min(16rem,calc(100vw-2rem))]"
+      >
         <div className="px-2 py-2" onKeyDown={(e) => e.stopPropagation()}>
           <SourceSearch
             value={mobileSearchValue}
@@ -248,7 +245,7 @@ export function Header() {
         {/* Right side: Mobile menu or Search + User (desktop) */}
         <MobileNav />
         <div className="hidden md:flex items-center gap-2">
-          <SearchForm />
+          <DesktopSearch />
           <UserMenu />
         </div>
       </div>

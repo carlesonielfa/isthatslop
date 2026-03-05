@@ -2,20 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SourceSearch } from "@/components/source-search";
+import { type SearchSourcesResult } from "@/data/actions";
 
 export function HeroSection() {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const [searchValue, setSearchValue] = useState<SearchSourcesResult | null>(
+    null,
+  );
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (query.trim()) {
-      router.push(`/browse?q=${encodeURIComponent(query.trim())}`);
-    } else {
-      router.push("/browse");
+  function handleSourceSelect(source: SearchSourcesResult | null) {
+    if (source) {
+      setSearchValue(null);
+      router.push(`/sources/${source.slug}`);
     }
+  }
+
+  function handleSubmit(query: string) {
+    router.push(`/browse?q=${encodeURIComponent(query)}`);
   }
 
   return (
@@ -50,21 +54,13 @@ export function HeroSection() {
           </span>
         </h2>
 
-        <form
+        <SourceSearch
+          value={searchValue}
+          onChange={handleSourceSelect}
           onSubmit={handleSubmit}
-          className="flex gap-2 max-w-md mx-auto mt-8"
-        >
-          <Input
-            type="search"
-            placeholder="Search sources..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 text-foreground"
-          />
-          <Button type="submit" variant="default">
-            Search
-          </Button>
-        </form>
+          placeholder="Search sources..."
+          className="max-w-md mx-auto mt-8"
+        />
 
         <p className="text-sm mt-6 text-secondary text-shadow-xs">
           The community database for human-made content.

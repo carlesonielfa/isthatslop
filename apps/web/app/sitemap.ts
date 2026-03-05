@@ -60,7 +60,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         updatedAt: sources.updatedAt,
       })
       .from(sources)
-      .where(and(isNull(sources.deletedAt), eq(sources.approvalStatus, "approved")));
+      .where(
+        and(isNull(sources.deletedAt), eq(sources.approvalStatus, "approved")),
+      );
   } catch {
     // If database is unavailable, return static pages only
   }
