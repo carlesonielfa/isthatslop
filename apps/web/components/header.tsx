@@ -51,7 +51,7 @@ function SearchForm({ className }: { className?: string }) {
           placeholder="Search..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-32 lg:w-48 text-foreground"
+          className="flex-1 min-w-0 w-32 lg:w-48 text-foreground"
         />
         <Button type="submit" size="icon-sm" variant="secondary">
           <MagnifyingGlassIcon className="size-4" />
@@ -88,7 +88,11 @@ function MobileNav() {
           Start
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48">
+      <DropdownMenuContent align="start" className="w-56">
+        <div className="px-2 py-2" onKeyDown={(e) => e.stopPropagation()}>
+          <SearchForm className="w-full" />
+        </div>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/" className="flex items-center gap-2">
             <HouseIcon className="size-4" />

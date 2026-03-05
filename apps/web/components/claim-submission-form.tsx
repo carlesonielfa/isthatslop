@@ -249,8 +249,9 @@ export function ClaimSubmissionForm({
                     onChange={(e) => {
                       setNewSourceName(e.target.value);
                       setFieldErrors((prev) => {
-                        const { sourceName, ...rest } = prev;
-                        return rest;
+                        const next = { ...prev };
+                        delete next.sourceName;
+                        return next;
                       });
                     }}
                     placeholder="e.g., Reddit, Medium, @username"
@@ -394,8 +395,9 @@ export function ClaimSubmissionForm({
                     onChange={(val) => {
                       setImpact(val);
                       setFieldErrors((prev) => {
-                        const { impact: _, ...rest } = prev;
-                        return rest;
+                        const next = { ...prev };
+                        delete next.impact;
+                        return next;
                       });
                     }}
                     disabled={isPending}
@@ -418,8 +420,9 @@ export function ClaimSubmissionForm({
                     onChange={(val) => {
                       setConfidence(val);
                       setFieldErrors((prev) => {
-                        const { confidence: _, ...rest } = prev;
-                        return rest;
+                        const next = { ...prev };
+                        delete next.confidence;
+                        return next;
                       });
                     }}
                     disabled={isPending}
@@ -443,8 +446,9 @@ export function ClaimSubmissionForm({
                     onChange={(e) => {
                       setContent(e.target.value);
                       setFieldErrors((prev) => {
-                        const { content: _, ...rest } = prev;
-                        return rest;
+                        const next = { ...prev };
+                        delete next.content;
+                        return next;
                       });
                     }}
                     placeholder="Describe the AI usage you observed. Include concrete evidence or patterns that led to your conclusion..."
