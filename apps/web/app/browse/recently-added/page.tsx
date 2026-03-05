@@ -7,8 +7,11 @@ import { getRecentlyAddedPageDTO } from "@/data/sources";
 import { formatTimeAgo } from "@/lib/date";
 
 export const metadata: Metadata = {
-  title: "Recently Added - IsThatSlop",
-  description: "Browse the most recently added sources to IsThatSlop.com",
+  title: "Recently Added",
+  description: "Browse the most recently added sources to IsThatSlop.com.",
+  openGraph: {
+    type: "website",
+  },
 };
 
 interface RecentlyAddedPageProps {

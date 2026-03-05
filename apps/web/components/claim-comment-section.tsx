@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -52,10 +53,13 @@ export function ClaimCommentSection({
       });
 
       if (!result.success) {
-        setError(result.error ?? "Failed to submit comment");
+        const msg = result.error ?? "Failed to submit comment";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
+      toast.success("Comment posted");
       setContent("");
       setIsDispute(false);
       router.refresh();
@@ -71,10 +75,13 @@ export function ClaimCommentSection({
       setVotingCommentId(null);
 
       if (!result.success) {
-        setVoteError(result.error ?? "Failed to record vote");
+        const msg = result.error ?? "Failed to record vote";
+        setVoteError(msg);
+        toast.error(msg);
         return;
       }
 
+      toast.success("Vote recorded");
       router.refresh();
     });
   };

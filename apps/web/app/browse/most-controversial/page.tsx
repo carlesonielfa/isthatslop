@@ -6,9 +6,12 @@ import { Pagination } from "@/components/pagination";
 import { getMostControversialPageDTO } from "@/data/sources";
 
 export const metadata: Metadata = {
-  title: "Most Controversial | IsThatSlop",
+  title: "Most Controversial",
   description:
     "Browse the most controversial sources on IsThatSlop.com — sources whose claims receive evenly split helpful and not-helpful votes.",
+  openGraph: {
+    type: "website",
+  },
 };
 
 interface MostControversialPageProps {

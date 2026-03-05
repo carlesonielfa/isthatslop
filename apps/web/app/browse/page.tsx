@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   getSourcesForBrowseDTO,
   getSourceTypesDTO,
@@ -7,6 +8,15 @@ import { Card, CardContent, CardTitleBar } from "@/components/ui/card";
 import { TierBadge } from "@/components/tier-badge";
 import { SourceTree } from "./source-tree";
 import { BrowseFilters } from "./browse-filters";
+
+export const metadata: Metadata = {
+  title: "Browse Sources",
+  description:
+    "Browse and filter AI content sources. Search by name, type, or tier.",
+  openGraph: {
+    type: "website",
+  },
+};
 
 interface BrowsePageProps {
   searchParams: Promise<{

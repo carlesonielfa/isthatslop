@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -23,9 +24,18 @@ const w95fa = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "IsThatSlop.com - AI Content Database",
+  metadataBase: new URL("https://isthatslop.com"),
+  title: {
+    template: "%s | IsThatSlop.com",
+    default: "IsThatSlop.com - AI Content Database",
+  },
   description:
-    "A community database for rating AI-generated vs human-created content. Rate sources on a 7-tier scale from Pure Artisanal to Pure Slop.",
+    "A community database for rating AI-generated vs human-created content. Rate sources on a 5-tier scale from Artisanal to Slop.",
+  openGraph: {
+    siteName: "IsThatSlop.com",
+    locale: "en_US",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -43,6 +53,7 @@ export default function RootLayout({
           <main className="flex-1 min-w-0">{children}</main>
           <Footer />
         </div>
+        <Toaster />
       </body>
     </html>
   );

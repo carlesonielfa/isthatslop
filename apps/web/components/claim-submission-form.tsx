@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,7 +78,8 @@ export function ClaimSubmissionForm({
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
 
   // Error state
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const handleSourceSelect = (source: SearchSourcesResult | null) => {
@@ -105,39 +107,31 @@ export function ClaimSubmissionForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setGeneralError(null);
 
-    // Validation
-    if (impact === null) {
-      setError("Please select an impact level");
+    // Per-field validation
+    const errors: Record<string, string> = {};
+    if (impact === null) errors.impact = "Please select an impact level";
+    if (confidence === null)
+      errors.confidence = "Please select a confidence level";
+    if (content.length < 100)
+      errors.content = "Claim must be at least 100 characters";
+    if (content.length > 2000)
+      errors.content = "Claim must be at most 2000 characters";
+    if (isCreatingNewSource && !newSourceName.trim())
+      errors.sourceName = "Source name is required";
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-
-    if (confidence === null) {
-      setError("Please select a confidence level");
-      return;
-    }
-
-    if (content.length < 100) {
-      setError("Claim must be at least 100 characters");
-      return;
-    }
-
-    if (content.length > 2000) {
-      setError("Claim must be at most 2000 characters");
-      return;
-    }
+    setFieldErrors({});
 
     startTransition(async () => {
       let sourceId = selectedSource?.id;
 
       // Create source if we're creating a new one
       if (isCreatingNewSource) {
-        if (!newSourceName.trim()) {
-          setError("Source name is required");
-          return;
-        }
-
         const createResult = await createSource({
           name: newSourceName.trim(),
           type: newSourceType.trim() || undefined,
@@ -147,31 +141,37 @@ export function ClaimSubmissionForm({
         });
 
         if (!createResult.success) {
-          setError(createResult.error ?? "Failed to create source");
+          const msg = createResult.error ?? "Failed to create source";
+          setGeneralError(msg);
+          toast.error(msg);
           return;
         }
 
+        toast.success("Source created");
         sourceId = createResult.sourceId;
       }
 
       if (!sourceId) {
-        setError("Please select or create a source");
+        setGeneralError("Please select or create a source");
         return;
       }
 
-      // Submit the claim
+      // Submit the claim (impact/confidence are validated non-null above)
       const result = await submitClaim({
         sourceId,
-        impact,
-        confidence,
+        impact: impact!,
+        confidence: confidence!,
         content,
       });
 
       if (!result.success) {
-        setError(result.error ?? "Failed to submit claim");
+        const msg = result.error ?? "Failed to submit claim";
+        setGeneralError(msg);
+        toast.error(msg);
         return;
       }
 
+      toast.success("Claim submitted successfully");
       setSuccess(true);
 
       // Redirect to the source page after a brief delay
@@ -202,9 +202,9 @@ export function ClaimSubmissionForm({
       <CardContent className="py-6 overflow-visible">
         <form onSubmit={handleSubmit}>
           <FieldGroup>
-            {error && (
+            {generalError && (
               <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-3">
-                {error}
+                {generalError}
               </div>
             )}
 
@@ -246,11 +246,23 @@ export function ClaimSubmissionForm({
                   <Input
                     id="source-name"
                     value={newSourceName}
-                    onChange={(e) => setNewSourceName(e.target.value)}
+                    onChange={(e) => {
+                      setNewSourceName(e.target.value);
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.sourceName;
+                        return next;
+                      });
+                    }}
                     placeholder="e.g., Reddit, Medium, @username"
                     disabled={isPending}
                     required
                   />
+                  {fieldErrors.sourceName && (
+                    <p className="text-destructive text-xs mt-1">
+                      {fieldErrors.sourceName}
+                    </p>
+                  )}
                 </Field>
 
                 <Field>
@@ -380,12 +392,24 @@ export function ClaimSubmissionForm({
                   <FieldLabel>Impact *</FieldLabel>
                   <ImpactSelector
                     value={impact}
-                    onChange={setImpact}
+                    onChange={(val) => {
+                      setImpact(val);
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.impact;
+                        return next;
+                      });
+                    }}
                     disabled={isPending}
                   />
                   <FieldDescription>
                     How much AI usage affects the source&apos;s integrity.
                   </FieldDescription>
+                  {fieldErrors.impact && (
+                    <p className="text-destructive text-xs mt-1">
+                      {fieldErrors.impact}
+                    </p>
+                  )}
                 </Field>
 
                 {/* Confidence Selection */}
@@ -393,12 +417,24 @@ export function ClaimSubmissionForm({
                   <FieldLabel>Confidence *</FieldLabel>
                   <ConfidenceSelector
                     value={confidence}
-                    onChange={setConfidence}
+                    onChange={(val) => {
+                      setConfidence(val);
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.confidence;
+                        return next;
+                      });
+                    }}
                     disabled={isPending}
                   />
                   <FieldDescription>
                     How certain you are that the content is AI-generated.
                   </FieldDescription>
+                  {fieldErrors.confidence && (
+                    <p className="text-destructive text-xs mt-1">
+                      {fieldErrors.confidence}
+                    </p>
+                  )}
                 </Field>
 
                 {/* Claim Content */}
@@ -407,7 +443,14 @@ export function ClaimSubmissionForm({
                   <Textarea
                     id="claim-content"
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    onChange={(e) => {
+                      setContent(e.target.value);
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.content;
+                        return next;
+                      });
+                    }}
                     placeholder="Describe the AI usage you observed. Include concrete evidence or patterns that led to your conclusion..."
                     disabled={isPending}
                     className="min-h-32"
@@ -429,6 +472,11 @@ export function ClaimSubmissionForm({
                     </span>
                     /2000 characters (minimum 100)
                   </FieldDescription>
+                  {fieldErrors.content && (
+                    <p className="text-destructive text-xs mt-1">
+                      {fieldErrors.content}
+                    </p>
+                  )}
                 </Field>
 
                 {/* Evidence Upload (placeholder) */}
@@ -498,16 +546,7 @@ export function ClaimSubmissionForm({
 
                 {/* Submit */}
                 <div className="flex gap-2 pt-2">
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={
-                      isPending ||
-                      impact === null ||
-                      confidence === null ||
-                      content.length < 100
-                    }
-                  >
+                  <Button type="submit" className="flex-1" disabled={isPending}>
                     {isPending ? "Submitting..." : "Submit Claim"}
                   </Button>
                 </div>
