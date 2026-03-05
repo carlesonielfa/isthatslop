@@ -59,7 +59,7 @@ export function ClaimCommentSection({
         return;
       }
 
-      toast.success("Comment submitted");
+      toast.success("Comment posted");
       setContent("");
       setIsDispute(false);
       router.refresh();
@@ -75,10 +75,13 @@ export function ClaimCommentSection({
       setVotingCommentId(null);
 
       if (!result.success) {
-        setVoteError(result.error ?? "Failed to record vote");
+        const msg = result.error ?? "Failed to record vote";
+        setVoteError(msg);
+        toast.error(msg);
         return;
       }
 
+      toast.success("Vote recorded");
       router.refresh();
     });
   };

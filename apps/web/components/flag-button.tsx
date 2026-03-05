@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { flagContent } from "@/data/moderation-actions";
 import type { FlagTargetType, FlagReason } from "@/data/moderation-actions";
 import {
@@ -38,10 +39,13 @@ export function FlagButton({ targetType, targetId }: FlagButtonProps) {
 
     setPending(false);
     if (result.success) {
+      toast.success("Content flagged for review");
       setSubmitted(true);
       setOpen(false);
     } else {
-      setError(result.error ?? "Failed to submit flag");
+      const msg = result.error ?? "Failed to submit flag";
+      setError(msg);
+      toast.error(msg);
     }
   }
 

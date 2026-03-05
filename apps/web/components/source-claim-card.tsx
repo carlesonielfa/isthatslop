@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/user-avatar";
@@ -63,10 +64,13 @@ export function SourceClaimCard({ claim, comments }: SourceClaimCardProps) {
       });
 
       if (!result.success) {
-        setError(result.error ?? "Failed to record vote");
+        const msg = result.error ?? "Failed to record vote";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
+      toast.success("Vote recorded");
       router.refresh();
     });
   };

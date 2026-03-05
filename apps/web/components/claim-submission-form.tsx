@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -147,10 +148,13 @@ export function ClaimSubmissionForm({
         });
 
         if (!createResult.success) {
-          setError(createResult.error ?? "Failed to create source");
+          const msg = createResult.error ?? "Failed to create source";
+          setError(msg);
+          toast.error(msg);
           return;
         }
 
+        toast.success("Source created");
         sourceId = createResult.sourceId;
       }
 
@@ -168,10 +172,13 @@ export function ClaimSubmissionForm({
       });
 
       if (!result.success) {
-        setError(result.error ?? "Failed to submit claim");
+        const msg = result.error ?? "Failed to submit claim";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
+      toast.success("Claim submitted successfully");
       setSuccess(true);
 
       // Redirect to the source page after a brief delay
