@@ -14,7 +14,7 @@
     "generate:component": "turbo gen react-component",
     "check-types": "tsc --noEmit",
     "db:generate": "bunx drizzle-kit generate",
-    "db:migrate": "bunx drizzle-kit migrate",
+    "db:migrate": "bunx drizzle-kit migrate && bun run scripts/apply-triggers.ts",
     "db:seed": "bun run src/seed.ts",
     "db:triggers": "bun run scripts/apply-triggers.ts",
     "db:seed-scoring": "bun run scripts/seed-scoring-test-data.ts",

@@ -14,6 +14,7 @@
     "RESEND_API_KEY",
     "CRON_SECRET",
     "NODE_ENV",
+    "NEXT_RUNTIME",
     "SKIP_ENV_VALIDATION"
   ],
   "tasks": {
