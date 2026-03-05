@@ -1,17 +1,18 @@
 import { sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { readdir, readFile } from "fs/promises";
 import { join } from "path";
+
+type DbWithExecute = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  execute: (query: any) => Promise<{ rows: Record<string, unknown>[] }>;
+};
 
 const EXPECTED_TRIGGERS = [
   "mark_scores_stale_after_claim",
   "mark_scores_stale_after_vote",
 ] as const;
 
-export async function applyTriggers(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: NodePgDatabase<Record<string, any>>,
-): Promise<void> {
+export async function applyTriggers(db: DbWithExecute): Promise<void> {
   const triggersDir = join(import.meta.dirname, "./triggers");
 
   const files = await readdir(triggersDir);
@@ -32,7 +33,9 @@ export async function applyTriggers(
   `);
 
   const foundNames = new Set(result.rows.map((row) => row.tgname as string));
-  const missingNames = EXPECTED_TRIGGERS.filter((name) => !foundNames.has(name));
+  const missingNames = EXPECTED_TRIGGERS.filter(
+    (name) => !foundNames.has(name),
+  );
 
   if (missingNames.length > 0) {
     throw new Error(
