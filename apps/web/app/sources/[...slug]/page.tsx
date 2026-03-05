@@ -99,18 +99,23 @@ export async function generateMetadata({ params }: SourcePageProps) {
 
   if (!source) {
     return {
-      title: "Source Not Found - IsThatSlop",
+      title: "Source Not Found",
     };
   }
 
   const tierLabel =
-    source.tier !== null
-      ? `${source.tier} (${tiers[source.tier]?.name})`
-      : "Unrated";
+    source.tier !== null ? (tiers[source.tier]?.name ?? "Unrated") : "Unrated";
+
+  const description = `Community ratings for ${source.name}. ${source.claimCount} claims. Tier: ${tierLabel}. See AI usage claims and evidence.`;
 
   return {
-    title: `${source.name} - IsThatSlop`,
-    description: `${source.claimCount} claims • Tier: ${tierLabel}`,
+    title: source.name,
+    description,
+    openGraph: {
+      title: source.name,
+      description,
+      type: "article",
+    },
   };
 }
 

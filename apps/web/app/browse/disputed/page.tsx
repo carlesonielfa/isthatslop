@@ -6,9 +6,12 @@ import { Pagination } from "@/components/pagination";
 import { getDisputedPageDTO } from "@/data/sources";
 
 export const metadata: Metadata = {
-  title: "Disputed Sources | IsThatSlop",
+  title: "Disputed Sources",
   description:
     "Browse the most disputed sources on IsThatSlop.com — sources whose claims have received the most dispute comments.",
+  openGraph: {
+    type: "website",
+  },
 };
 
 interface DisputedPageProps {
