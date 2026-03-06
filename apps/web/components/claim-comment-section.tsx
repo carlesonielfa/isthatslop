@@ -183,33 +183,33 @@ export function ClaimCommentSection({
           </p>
         }
       >
-      <form onSubmit={handleSubmit} className="space-y-2">
-        {error && (
-          <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-2">
-            {error}
-          </div>
-        )}
-        <Textarea
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          placeholder="Add context, evidence, or a dispute..."
-          className="min-h-20"
-          maxLength={1000}
-          disabled={isPending}
-        />
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={isDispute}
-            onChange={(event) => setIsDispute(event.target.checked)}
+        <form onSubmit={handleSubmit} className="space-y-2">
+          {error && (
+            <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-2">
+              {error}
+            </div>
+          )}
+          <Textarea
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder="Add context, evidence, or a dispute..."
+            className="min-h-20"
+            maxLength={1000}
             disabled={isPending}
           />
-          Mark as dispute
-        </label>
-        <Button type="submit" size="sm" disabled={isPending}>
-          {isPending ? "Submitting..." : "Post Comment"}
-        </Button>
-      </form>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={isDispute}
+              onChange={(event) => setIsDispute(event.target.checked)}
+              disabled={isPending}
+            />
+            Mark as dispute
+          </label>
+          <Button type="submit" size="sm" disabled={isPending}>
+            {isPending ? "Submitting..." : "Post Comment"}
+          </Button>
+        </form>
       </VerificationGate>
     </div>
   );

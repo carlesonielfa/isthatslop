@@ -11,7 +11,11 @@ import {
   claimComments,
 } from "@repo/database";
 import { eq, and, isNull, sql } from "drizzle-orm";
-import { getCurrentUser, isModerator, isEmailVerified } from "@/app/lib/auth.server";
+import {
+  getCurrentUser,
+  isModerator,
+  isEmailVerified,
+} from "@/app/lib/auth.server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 
 // =============================================================================
