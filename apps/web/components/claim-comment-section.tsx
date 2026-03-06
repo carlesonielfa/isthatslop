@@ -11,6 +11,7 @@ import { formatTimeAgo } from "@/lib/date";
 import type { ClaimCommentDTO } from "@/data/sources";
 import { submitClaimComment, voteOnComment } from "@/data/actions";
 import { FlagButton } from "@/components/flag-button";
+import { VerificationGate } from "@/components/verification-gate";
 
 interface ClaimCommentSectionProps {
   claimId: string;
@@ -175,6 +176,13 @@ export function ClaimCommentSection({
         </div>
       )}
 
+      <VerificationGate
+        fallback={
+          <p className="text-xs text-muted-foreground">
+            Verify your email address to post comments.
+          </p>
+        }
+      >
       <form onSubmit={handleSubmit} className="space-y-2">
         {error && (
           <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-2">
@@ -202,6 +210,7 @@ export function ClaimCommentSection({
           {isPending ? "Submitting..." : "Post Comment"}
         </Button>
       </form>
+      </VerificationGate>
     </div>
   );
 }
