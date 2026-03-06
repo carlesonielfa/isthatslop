@@ -22,6 +22,7 @@ import {
   createSource,
   type SearchSourcesResult,
 } from "@/data/actions";
+import { VerificationGate } from "@/components/verification-gate";
 
 type FormMode = "select-source" | "create-source" | "write-claim";
 
@@ -200,6 +201,13 @@ export function ClaimSubmissionForm({
     <Card className="max-w-lg mx-auto overflow-visible">
       <CardTitleBar>Submit a Claim</CardTitleBar>
       <CardContent className="py-6 overflow-visible">
+        <VerificationGate
+          fallback={
+            <p className="text-xs text-muted-foreground">
+              Verify your email address to submit claims.
+            </p>
+          }
+        >
         <form onSubmit={handleSubmit}>
           <FieldGroup>
             {generalError && (
@@ -554,6 +562,7 @@ export function ClaimSubmissionForm({
             )}
           </FieldGroup>
         </form>
+        </VerificationGate>
       </CardContent>
     </Card>
   );
