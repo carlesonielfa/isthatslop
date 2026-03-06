@@ -11,7 +11,11 @@ import {
   claimComments,
 } from "@repo/database";
 import { eq, and, isNull, sql } from "drizzle-orm";
-import { getCurrentUser, isModerator } from "@/app/lib/auth.server";
+import {
+  getCurrentUser,
+  isModerator,
+  isEmailVerified,
+} from "@/app/lib/auth.server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 
 // =============================================================================
@@ -120,6 +124,14 @@ export async function flagContent(
     const user = await getCurrentUser();
     if (!user) {
       return { success: false, error: "You must be logged in to flag content" };
+    }
+
+    const verified = await isEmailVerified();
+    if (!verified) {
+      return {
+        success: false,
+        error: "Please verify your email address before flagging content",
+      };
     }
 
     // Rate limit

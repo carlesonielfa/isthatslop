@@ -25,13 +25,6 @@ export const env =
     ? (process.env as unknown as z.infer<typeof envSchema>)
     : envSchema.parse(process.env);
 
-// Determine which OAuth providers are fully configured
-export const configuredProviders = {
-  google: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
-  github: !!(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET),
-  discord: !!(env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET),
-};
-
 // Warn about partial OAuth configurations
 if (process.env.SKIP_ENV_VALIDATION !== "1") {
   const oauthPairs = [

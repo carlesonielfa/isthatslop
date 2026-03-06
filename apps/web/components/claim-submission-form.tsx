@@ -22,6 +22,7 @@ import {
   createSource,
   type SearchSourcesResult,
 } from "@/data/actions";
+import { VerificationGate } from "@/components/verification-gate";
 
 type FormMode = "select-source" | "create-source" | "write-claim";
 
@@ -200,360 +201,376 @@ export function ClaimSubmissionForm({
     <Card className="max-w-lg mx-auto overflow-visible">
       <CardTitleBar>Submit a Claim</CardTitleBar>
       <CardContent className="py-6 overflow-visible">
-        <form onSubmit={handleSubmit}>
-          <FieldGroup>
-            {generalError && (
-              <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-3">
-                {generalError}
-              </div>
-            )}
+        <VerificationGate
+          fallback={
+            <p className="text-xs text-muted-foreground">
+              Verify your email address to submit claims.
+            </p>
+          }
+        >
+          <form onSubmit={handleSubmit}>
+            <FieldGroup>
+              {generalError && (
+                <div className="bg-destructive/10 border border-destructive text-destructive text-xs p-3">
+                  {generalError}
+                </div>
+              )}
 
-            {/* Source Selection / Creation */}
-            {mode === "select-source" && (
-              <Field>
-                <FieldLabel>Search for a Source</FieldLabel>
-                <SourceSearch
-                  value={selectedSource}
-                  onChange={handleSourceSelect}
-                  onCreateNew={handleCreateNewSource}
-                  disabled={isPending}
-                  placeholder="Type to search sources..."
-                />
-                <FieldDescription>
-                  Search for an existing source or create a new one if it
-                  doesn&apos;t exist.
-                </FieldDescription>
-              </Field>
-            )}
+              {/* Source Selection / Creation */}
+              {mode === "select-source" && (
+                <Field>
+                  <FieldLabel>Search for a Source</FieldLabel>
+                  <SourceSearch
+                    value={selectedSource}
+                    onChange={handleSourceSelect}
+                    onCreateNew={handleCreateNewSource}
+                    disabled={isPending}
+                    placeholder="Type to search sources..."
+                  />
+                  <FieldDescription>
+                    Search for an existing source or create a new one if it
+                    doesn&apos;t exist.
+                  </FieldDescription>
+                </Field>
+              )}
 
-            {mode === "create-source" && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Create New Source</span>
+              {mode === "create-source" && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      Create New Source
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleBackToSearch}
+                      disabled={isPending}
+                    >
+                      Back to Search
+                    </Button>
+                  </div>
+
+                  <Field>
+                    <FieldLabel htmlFor="source-name">Source Name *</FieldLabel>
+                    <Input
+                      id="source-name"
+                      value={newSourceName}
+                      onChange={(e) => {
+                        setNewSourceName(e.target.value);
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.sourceName;
+                          return next;
+                        });
+                      }}
+                      placeholder="e.g., Reddit, Medium, @username"
+                      disabled={isPending}
+                      required
+                    />
+                    {fieldErrors.sourceName && (
+                      <p className="text-destructive text-xs mt-1">
+                        {fieldErrors.sourceName}
+                      </p>
+                    )}
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="source-type">Type</FieldLabel>
+                    <Input
+                      id="source-type"
+                      value={newSourceType}
+                      onChange={(e) => setNewSourceType(e.target.value)}
+                      placeholder="e.g., platform, website, subreddit, blog"
+                      disabled={isPending}
+                    />
+                    <FieldDescription>
+                      Categorize what kind of source this is (optional).
+                    </FieldDescription>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="source-url">URL</FieldLabel>
+                    <Input
+                      id="source-url"
+                      type="url"
+                      value={newSourceUrl}
+                      onChange={(e) => setNewSourceUrl(e.target.value)}
+                      placeholder="https://..."
+                      disabled={isPending}
+                    />
+                    <FieldDescription>
+                      Link to the source (optional).
+                    </FieldDescription>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="source-description">
+                      Description
+                    </FieldLabel>
+                    <Textarea
+                      id="source-description"
+                      value={newSourceDescription}
+                      onChange={(e) => setNewSourceDescription(e.target.value)}
+                      placeholder="Brief description of this source..."
+                      disabled={isPending}
+                      className="min-h-20"
+                    />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Parent Source (optional)</FieldLabel>
+                    <SourceSearch
+                      value={newSourceParent}
+                      onChange={setNewSourceParent}
+                      disabled={isPending}
+                      placeholder="Search for parent source..."
+                    />
+                    <FieldDescription>
+                      If this source belongs to a larger source (e.g., a
+                      subreddit belongs to Reddit), search for the parent here.
+                    </FieldDescription>
+                  </Field>
+
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleBackToSearch}
-                    disabled={isPending}
+                    onClick={() => setMode("write-claim")}
+                    disabled={isPending || !newSourceName.trim()}
+                    className="w-full"
                   >
-                    Back to Search
+                    Continue to Claim
                   </Button>
-                </div>
+                </>
+              )}
 
-                <Field>
-                  <FieldLabel htmlFor="source-name">Source Name *</FieldLabel>
-                  <Input
-                    id="source-name"
-                    value={newSourceName}
-                    onChange={(e) => {
-                      setNewSourceName(e.target.value);
-                      setFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.sourceName;
-                        return next;
-                      });
-                    }}
-                    placeholder="e.g., Reddit, Medium, @username"
-                    disabled={isPending}
-                    required
-                  />
-                  {fieldErrors.sourceName && (
-                    <p className="text-destructive text-xs mt-1">
-                      {fieldErrors.sourceName}
-                    </p>
-                  )}
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="source-type">Type</FieldLabel>
-                  <Input
-                    id="source-type"
-                    value={newSourceType}
-                    onChange={(e) => setNewSourceType(e.target.value)}
-                    placeholder="e.g., platform, website, subreddit, blog"
-                    disabled={isPending}
-                  />
-                  <FieldDescription>
-                    Categorize what kind of source this is (optional).
-                  </FieldDescription>
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="source-url">URL</FieldLabel>
-                  <Input
-                    id="source-url"
-                    type="url"
-                    value={newSourceUrl}
-                    onChange={(e) => setNewSourceUrl(e.target.value)}
-                    placeholder="https://..."
-                    disabled={isPending}
-                  />
-                  <FieldDescription>
-                    Link to the source (optional).
-                  </FieldDescription>
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="source-description">
-                    Description
-                  </FieldLabel>
-                  <Textarea
-                    id="source-description"
-                    value={newSourceDescription}
-                    onChange={(e) => setNewSourceDescription(e.target.value)}
-                    placeholder="Brief description of this source..."
-                    disabled={isPending}
-                    className="min-h-20"
-                  />
-                </Field>
-
-                <Field>
-                  <FieldLabel>Parent Source (optional)</FieldLabel>
-                  <SourceSearch
-                    value={newSourceParent}
-                    onChange={setNewSourceParent}
-                    disabled={isPending}
-                    placeholder="Search for parent source..."
-                  />
-                  <FieldDescription>
-                    If this source belongs to a larger source (e.g., a subreddit
-                    belongs to Reddit), search for the parent here.
-                  </FieldDescription>
-                </Field>
-
-                <Button
-                  type="button"
-                  onClick={() => setMode("write-claim")}
-                  disabled={isPending || !newSourceName.trim()}
-                  className="w-full"
-                >
-                  Continue to Claim
-                </Button>
-              </>
-            )}
-
-            {mode === "write-claim" && (
-              <>
-                {/* Show selected/new source info */}
-                <div className="bg-muted p-3 border border-border-dark">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {selectedSource ? (
-                        <>
-                          <TierBadge tier={selectedSource.tier} />
+              {mode === "write-claim" && (
+                <>
+                  {/* Show selected/new source info */}
+                  <div className="bg-muted p-3 border border-border-dark">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {selectedSource ? (
+                          <>
+                            <TierBadge tier={selectedSource.tier} />
+                            <div>
+                              <div className="font-medium">
+                                {selectedSource.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {selectedSource.type && (
+                                  <span>{selectedSource.type} · </span>
+                                )}
+                                {selectedSource.claimCount} claims
+                              </div>
+                            </div>
+                          </>
+                        ) : (
                           <div>
-                            <div className="font-medium">
-                              {selectedSource.name}
-                            </div>
+                            <div className="font-medium">{newSourceName}</div>
                             <div className="text-xs text-muted-foreground">
-                              {selectedSource.type && (
-                                <span>{selectedSource.type} · </span>
-                              )}
-                              {selectedSource.claimCount} claims
+                              New source
+                              {newSourceType && ` · ${newSourceType}`}
+                              {newSourceParent &&
+                                ` · under ${newSourceParent.name}`}
                             </div>
                           </div>
-                        </>
-                      ) : (
-                        <div>
-                          <div className="font-medium">{newSourceName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            New source
-                            {newSourceType && ` · ${newSourceType}`}
-                            {newSourceParent &&
-                              ` · under ${newSourceParent.name}`}
-                          </div>
+                        )}
+                      </div>
+                      {!preselectedSource && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (selectedSource) {
+                              setSelectedSource(null);
+                              setMode("select-source");
+                            } else {
+                              setMode("create-source");
+                            }
+                          }}
+                          disabled={isPending}
+                        >
+                          Change
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Impact Selection */}
+                  <Field>
+                    <FieldLabel>Impact *</FieldLabel>
+                    <ImpactSelector
+                      value={impact}
+                      onChange={(val) => {
+                        setImpact(val);
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.impact;
+                          return next;
+                        });
+                      }}
+                      disabled={isPending}
+                    />
+                    <FieldDescription>
+                      How much AI usage affects the source&apos;s integrity.
+                    </FieldDescription>
+                    {fieldErrors.impact && (
+                      <p className="text-destructive text-xs mt-1">
+                        {fieldErrors.impact}
+                      </p>
+                    )}
+                  </Field>
+
+                  {/* Confidence Selection */}
+                  <Field>
+                    <FieldLabel>Confidence *</FieldLabel>
+                    <ConfidenceSelector
+                      value={confidence}
+                      onChange={(val) => {
+                        setConfidence(val);
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.confidence;
+                          return next;
+                        });
+                      }}
+                      disabled={isPending}
+                    />
+                    <FieldDescription>
+                      How certain you are that the content is AI-generated.
+                    </FieldDescription>
+                    {fieldErrors.confidence && (
+                      <p className="text-destructive text-xs mt-1">
+                        {fieldErrors.confidence}
+                      </p>
+                    )}
+                  </Field>
+
+                  {/* Claim Content */}
+                  <Field>
+                    <FieldLabel htmlFor="claim-content">
+                      Your Claim *
+                    </FieldLabel>
+                    <Textarea
+                      id="claim-content"
+                      value={content}
+                      onChange={(e) => {
+                        setContent(e.target.value);
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.content;
+                          return next;
+                        });
+                      }}
+                      placeholder="Describe the AI usage you observed. Include concrete evidence or patterns that led to your conclusion..."
+                      disabled={isPending}
+                      className="min-h-32"
+                      minLength={100}
+                      maxLength={2000}
+                      required
+                    />
+                    <FieldDescription>
+                      <span
+                        className={
+                          content.length < 100
+                            ? "text-destructive"
+                            : content.length > 1800
+                              ? "text-orange-500"
+                              : ""
+                        }
+                      >
+                        {content.length}
+                      </span>
+                      /2000 characters (minimum 100)
+                    </FieldDescription>
+                    {fieldErrors.content && (
+                      <p className="text-destructive text-xs mt-1">
+                        {fieldErrors.content}
+                      </p>
+                    )}
+                  </Field>
+
+                  {/* Evidence Upload (placeholder) */}
+                  <Field>
+                    <FieldLabel htmlFor="evidence-upload">
+                      Evidence (optional)
+                    </FieldLabel>
+                    <div className="space-y-2">
+                      <Input
+                        id="evidence-upload"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        disabled={isPending}
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setEvidenceFiles((prev) =>
+                            [...prev, ...files].slice(0, 3),
+                          );
+                        }}
+                        className="cursor-pointer file:mr-3 file:px-3 file:py-1 file:border-0 file:bg-muted file:text-foreground file:cursor-pointer"
+                      />
+                      {evidenceFiles.length > 0 && (
+                        <div className="space-y-1">
+                          {evidenceFiles.map((file, index) => (
+                            <div
+                              key={`${file.name}-${index}`}
+                              className="flex items-center justify-between bg-muted px-2 py-1 text-xs border border-border-dark"
+                            >
+                              <span className="truncate max-w-50">
+                                {file.name}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                  setEvidenceFiles((prev) =>
+                                    prev.filter((_, i) => i !== index),
+                                  );
+                                }}
+                                disabled={isPending}
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
-                    {!preselectedSource && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (selectedSource) {
-                            setSelectedSource(null);
-                            setMode("select-source");
-                          } else {
-                            setMode("create-source");
-                          }
-                        }}
-                        disabled={isPending}
-                      >
-                        Change
-                      </Button>
-                    )}
+                    <FieldDescription>
+                      Upload screenshots or images as evidence (max 3 files).
+                    </FieldDescription>
+                  </Field>
+
+                  {/* Guidelines */}
+                  <div className="bg-muted/50 p-3 border border-border-dark/50 text-xs space-y-1">
+                    <div className="font-medium">Claim Guidelines:</div>
+                    <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                      <li>Be specific about the AI evidence you found</li>
+                      <li>Use clear, factual language</li>
+                      <li>Avoid personal attacks or harassment</li>
+                      <li>Focus on the content, not the creators</li>
+                    </ul>
                   </div>
-                </div>
 
-                {/* Impact Selection */}
-                <Field>
-                  <FieldLabel>Impact *</FieldLabel>
-                  <ImpactSelector
-                    value={impact}
-                    onChange={(val) => {
-                      setImpact(val);
-                      setFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.impact;
-                        return next;
-                      });
-                    }}
-                    disabled={isPending}
-                  />
-                  <FieldDescription>
-                    How much AI usage affects the source&apos;s integrity.
-                  </FieldDescription>
-                  {fieldErrors.impact && (
-                    <p className="text-destructive text-xs mt-1">
-                      {fieldErrors.impact}
-                    </p>
-                  )}
-                </Field>
-
-                {/* Confidence Selection */}
-                <Field>
-                  <FieldLabel>Confidence *</FieldLabel>
-                  <ConfidenceSelector
-                    value={confidence}
-                    onChange={(val) => {
-                      setConfidence(val);
-                      setFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.confidence;
-                        return next;
-                      });
-                    }}
-                    disabled={isPending}
-                  />
-                  <FieldDescription>
-                    How certain you are that the content is AI-generated.
-                  </FieldDescription>
-                  {fieldErrors.confidence && (
-                    <p className="text-destructive text-xs mt-1">
-                      {fieldErrors.confidence}
-                    </p>
-                  )}
-                </Field>
-
-                {/* Claim Content */}
-                <Field>
-                  <FieldLabel htmlFor="claim-content">Your Claim *</FieldLabel>
-                  <Textarea
-                    id="claim-content"
-                    value={content}
-                    onChange={(e) => {
-                      setContent(e.target.value);
-                      setFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.content;
-                        return next;
-                      });
-                    }}
-                    placeholder="Describe the AI usage you observed. Include concrete evidence or patterns that led to your conclusion..."
-                    disabled={isPending}
-                    className="min-h-32"
-                    minLength={100}
-                    maxLength={2000}
-                    required
-                  />
-                  <FieldDescription>
-                    <span
-                      className={
-                        content.length < 100
-                          ? "text-destructive"
-                          : content.length > 1800
-                            ? "text-orange-500"
-                            : ""
-                      }
-                    >
-                      {content.length}
-                    </span>
-                    /2000 characters (minimum 100)
-                  </FieldDescription>
-                  {fieldErrors.content && (
-                    <p className="text-destructive text-xs mt-1">
-                      {fieldErrors.content}
-                    </p>
-                  )}
-                </Field>
-
-                {/* Evidence Upload (placeholder) */}
-                <Field>
-                  <FieldLabel htmlFor="evidence-upload">
-                    Evidence (optional)
-                  </FieldLabel>
-                  <div className="space-y-2">
-                    <Input
-                      id="evidence-upload"
-                      type="file"
-                      accept="image/*"
-                      multiple
+                  {/* Submit */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="submit"
+                      className="flex-1"
                       disabled={isPending}
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        setEvidenceFiles((prev) =>
-                          [...prev, ...files].slice(0, 3),
-                        );
-                      }}
-                      className="cursor-pointer file:mr-3 file:px-3 file:py-1 file:border-0 file:bg-muted file:text-foreground file:cursor-pointer"
-                    />
-                    {evidenceFiles.length > 0 && (
-                      <div className="space-y-1">
-                        {evidenceFiles.map((file, index) => (
-                          <div
-                            key={`${file.name}-${index}`}
-                            className="flex items-center justify-between bg-muted px-2 py-1 text-xs border border-border-dark"
-                          >
-                            <span className="truncate max-w-50">
-                              {file.name}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
-                              onClick={() => {
-                                setEvidenceFiles((prev) =>
-                                  prev.filter((_, i) => i !== index),
-                                );
-                              }}
-                              disabled={isPending}
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    >
+                      {isPending ? "Submitting..." : "Submit Claim"}
+                    </Button>
                   </div>
-                  <FieldDescription>
-                    Upload screenshots or images as evidence (max 3 files).
-                  </FieldDescription>
-                </Field>
-
-                {/* Guidelines */}
-                <div className="bg-muted/50 p-3 border border-border-dark/50 text-xs space-y-1">
-                  <div className="font-medium">Claim Guidelines:</div>
-                  <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                    <li>Be specific about the AI evidence you found</li>
-                    <li>Use clear, factual language</li>
-                    <li>Avoid personal attacks or harassment</li>
-                    <li>Focus on the content, not the creators</li>
-                  </ul>
-                </div>
-
-                {/* Submit */}
-                <div className="flex gap-2 pt-2">
-                  <Button type="submit" className="flex-1" disabled={isPending}>
-                    {isPending ? "Submitting..." : "Submit Claim"}
-                  </Button>
-                </div>
-              </>
-            )}
-          </FieldGroup>
-        </form>
+                </>
+              )}
+            </FieldGroup>
+          </form>
+        </VerificationGate>
       </CardContent>
     </Card>
   );
