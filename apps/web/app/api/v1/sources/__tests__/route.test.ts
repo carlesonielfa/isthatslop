@@ -61,7 +61,9 @@ describe("GET /api/v1/sources", () => {
 
   test("returns 404 when no source matches the url", async () => {
     mockDbResult = [];
-    const req = makeRequest("http://localhost/api/v1/sources?url=unknown.example.com");
+    const req = makeRequest(
+      "http://localhost/api/v1/sources?url=unknown.example.com",
+    );
     const res = await GET(req);
     expect(res.status).toBe(404);
     const body = await res.json();
@@ -86,7 +88,9 @@ describe("GET /api/v1/sources", () => {
         approvalStatus: "approved",
       },
     ];
-    const req = makeRequest("http://localhost/api/v1/sources?url=reddit.com/r/test");
+    const req = makeRequest(
+      "http://localhost/api/v1/sources?url=reddit.com/r/test",
+    );
     const res = await GET(req);
     expect(res.status).toBe(200);
     const body = await res.json();

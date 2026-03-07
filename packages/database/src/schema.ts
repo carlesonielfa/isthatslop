@@ -157,6 +157,7 @@ export const sources = pgTable(
     index("sources_active_idx")
       .on(table.id)
       .where(sql`${table.deletedAt} IS NULL`),
+    index("sources_url_idx").on(table.url), // Required for GET /api/v1/sources?url= performance
     check("sources_max_depth", sql`${table.depth} <= 5`),
   ],
 );

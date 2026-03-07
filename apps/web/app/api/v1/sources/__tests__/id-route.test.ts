@@ -25,8 +25,12 @@ mock.module("drizzle-orm", () => ({
 
 const { GET } = await import("@/app/api/v1/sources/[id]/route");
 
-function makeRequest(id: string): [NextRequest, { params: Promise<{ id: string }> }] {
-  const req = new Request(`http://localhost/api/v1/sources/${id}`) as unknown as NextRequest;
+function makeRequest(
+  id: string,
+): [NextRequest, { params: Promise<{ id: string }> }] {
+  const req = new Request(
+    `http://localhost/api/v1/sources/${id}`,
+  ) as unknown as NextRequest;
   const params = Promise.resolve({ id });
   return [req, { params }];
 }

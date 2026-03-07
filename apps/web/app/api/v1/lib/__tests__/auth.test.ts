@@ -22,7 +22,9 @@ describe("requireAuth", () => {
   });
 
   test("returns ok:false and 401 Response when getSession returns null", async () => {
-    const req = new Request("http://localhost/api/v1/sources/some-id") as unknown as NextRequest;
+    const req = new Request(
+      "http://localhost/api/v1/sources/some-id",
+    ) as unknown as NextRequest;
     const result = await requireAuth(req);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -37,7 +39,9 @@ describe("requireAuth", () => {
       user: { id: "user-123", email: "test@example.com" },
       session: { id: "session-abc" },
     }));
-    const req = new Request("http://localhost/api/v1/sources/some-id") as unknown as NextRequest;
+    const req = new Request(
+      "http://localhost/api/v1/sources/some-id",
+    ) as unknown as NextRequest;
     const result = await requireAuth(req);
     expect(result.ok).toBe(true);
     if (result.ok) {
