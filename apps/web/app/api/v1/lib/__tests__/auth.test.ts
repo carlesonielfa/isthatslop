@@ -2,7 +2,8 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 import type { NextRequest } from "next/server";
 
 // Mock before importing the module under test
-const mockGetSession = mock(async () => null);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockGetSession = mock(async (): Promise<any> => null);
 
 mock.module("@/app/lib/auth", () => ({
   auth: {
