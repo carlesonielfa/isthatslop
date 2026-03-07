@@ -3,7 +3,7 @@
 // See: .planning/STATE.md Decisions.
 import { type NextRequest } from "next/server";
 import { db, sources, sourceScoreCache } from "@repo/database";
-import { eq, and, isNull, ilike, desc } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 
@@ -45,12 +45,11 @@ async function lookupSourceByUrl(normalizedUrl: string) {
     .leftJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
     .where(
       and(
-        ilike(sources.url, `%${normalizedUrl}%`),
+        sql`lower(regexp_replace(${sources.url}, '^https?://', '')) = ${normalizedUrl}`,
         isNull(sources.deletedAt),
         eq(sources.approvalStatus, "approved"),
       ),
     )
-    .orderBy(desc(sources.depth)) // Most specific match wins (greatest depth)
     .limit(1);
 }
 
