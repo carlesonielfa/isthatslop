@@ -33,7 +33,7 @@ mock.module("drizzle-orm", () => ({
   sql: mock(() => ({})),
 }));
 
-const { GET } = await import("@/app/api/v1/sources/route");
+const { GET, normalizeUrl } = await import("@/app/api/v1/sources/route");
 
 function makeRequest(url: string): NextRequest {
   return new Request(url) as unknown as NextRequest;
@@ -103,6 +103,13 @@ describe("GET /api/v1/sources", () => {
     // Internal fields must not leak
     expect(body).not.toHaveProperty("deletedAt");
     expect(body).not.toHaveProperty("createdByUserId");
+  });
+
+  test("normalizeUrl strips scheme, lowercases, and trims trailing slash", () => {
+    expect(normalizeUrl("https://Reddit.com/")).toBe("reddit.com");
+    expect(normalizeUrl("http://reddit.com")).toBe("reddit.com");
+    expect(normalizeUrl("reddit.com")).toBe("reddit.com");
+    expect(normalizeUrl("HTTPS://Example.COM/path/")).toBe("example.com/path");
   });
 
   test("returns tier:null when source has no score cache entry", async () => {

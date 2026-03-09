@@ -18,7 +18,7 @@ const QuerySchema = z.object({
   url: z.string().min(1).max(500),
 });
 
-function normalizeUrl(raw: string): string {
+export function normalizeUrl(raw: string): string {
   return raw
     .replace(/^https?:\/\//i, "")
     .replace(/\/$/, "")
