@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { username } from "better-auth/plugins";
+import { username, bearer } from "better-auth/plugins";
 import { db } from "@repo/database";
 import { sendVerificationEmail, sendResetPasswordEmail } from "./email";
 
@@ -53,6 +53,7 @@ export const auth = betterAuth({
       minUsernameLength: 3,
       maxUsernameLength: 30,
     }),
+    bearer(), // Enables Authorization: Bearer <token> → session cookie conversion for extension
   ],
   user: {
     additionalFields: {

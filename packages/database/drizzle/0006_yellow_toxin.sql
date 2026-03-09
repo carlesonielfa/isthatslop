@@ -1,0 +1,1 @@
+CREATE INDEX "sources_url_idx" ON "sources" USING btree ("url");

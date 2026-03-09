@@ -43,6 +43,13 @@
       "when": 1771583956126,
       "tag": "0005_parallel_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772892922659,
+      "tag": "0006_yellow_toxin",
+      "breakpoints": true
     }
   ]
 }
