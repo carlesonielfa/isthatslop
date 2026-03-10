@@ -22,6 +22,7 @@ mock.module("drizzle-orm", () => ({
   eq: mock(() => ({})),
   and: mock(() => ({})),
   isNull: mock(() => ({})),
+  isNotNull: mock(() => ({})),
   sql: mock(() => ({})),
 }));
 
@@ -70,7 +71,7 @@ describe("GET /api/v1/dump", () => {
     expect(Array.isArray(body.entries)).toBe(true);
   });
 
-  test("entries array contains { url, tier } objects", async () => {
+  test("entries array contains { urlHash, tier } objects", async () => {
     mockDbResult = [
       { url: "reddit.com/r/MachineLearning", tier: 2 },
       { url: "youtube.com/@Example", tier: 0 },
@@ -80,9 +81,10 @@ describe("GET /api/v1/dump", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     const entry = body.entries[0];
-    expect(entry).toHaveProperty("url");
+    expect(entry).toHaveProperty("urlHash");
     expect(entry).toHaveProperty("tier");
-    expect(body.entries[0].url).toBe("reddit.com/r/MachineLearning");
+    expect(typeof body.entries[0].urlHash).toBe("string");
+    expect(body.entries[0].urlHash.length).toBe(16);
     expect(body.entries[0].tier).toBe(2);
   });
 
