@@ -44,6 +44,4 @@ if (!target) {
   );
 }
 
-console.log(
-  `PASS: reddit.com/r/MachineLearning -> tier ${target.tier}`,
-);
+console.log(`PASS: reddit.com/r/MachineLearning -> tier ${target.tier}`);
