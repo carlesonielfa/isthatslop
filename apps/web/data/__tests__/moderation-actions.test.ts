@@ -1,12 +1,23 @@
 import { describe, it, expect, mock } from "bun:test";
 
 // Mock the database module before importing the functions under test
+const dbChain = {
+  select: mock(() => dbChain),
+  from: mock(() => dbChain),
+  where: mock(() => dbChain),
+  limit: mock(async () => []),
+  insert: mock(() => dbChain),
+  values: mock(async () => []),
+  update: mock(() => dbChain),
+  set: mock(() => dbChain),
+};
+
 mock.module("@repo/database", () => ({
-  db: {
-    select: mock(() => {}),
-    insert: mock(() => {}),
-    update: mock(() => {}),
-  },
+  db: dbChain,
+  claims: {},
+  sources: {},
+  claimComments: {},
+  flags: {},
 }));
 
 // Mock auth module
