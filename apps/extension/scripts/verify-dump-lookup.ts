@@ -15,7 +15,10 @@ function normalizeUrl(raw: string): string {
 // Note: uses Node's createHash (not Web Crypto) since this runs in Bun/Node, not a browser
 // service worker. Same SHA-256 algorithm, different API surface, identical output.
 function computeUrlHash(url: string): string {
-  return createHash("sha256").update(normalizeUrl(url)).digest("hex").slice(0, 16);
+  return createHash("sha256")
+    .update(normalizeUrl(url))
+    .digest("hex")
+    .slice(0, 16);
 }
 
 const res = await fetch(DUMP_URL);
@@ -70,9 +73,6 @@ if (tier !== undefined) {
   console.log(`PASS: ${testUrl} -> tier ${tier}`);
   process.exit(0);
 } else {
-  console.log(
-    "Available hashes (first 5):",
-    [...scoreMap.keys()].slice(0, 5),
-  );
+  console.log("Available hashes (first 5):", [...scoreMap.keys()].slice(0, 5));
   throw new Error("TEST FAILED: hash not found");
 }

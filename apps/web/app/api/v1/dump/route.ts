@@ -7,6 +7,7 @@ import { createHash } from "crypto";
 import { db, sources, sourceScoreCache } from "@repo/database";
 import { eq, and, isNull, isNotNull } from "drizzle-orm";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
+import { createEndpointCache } from "@/lib/endpoint-cache";
 import type { NextRequest } from "next/server";
 
 const CORS_HEADERS = {
@@ -14,6 +15,16 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+interface DumpPayload {
+  generatedAt: string;
+  count: number;
+  entries: { urlHash: string; tier: number }[];
+}
+
+const dumpCache = createEndpointCache<DumpPayload>({
+  ttlMs: 2 * 60 * 60 * 1000, // 2 hours
+});
 
 export async function OPTIONS() {
   return new Response(null, { status: 200, headers: CORS_HEADERS });
@@ -35,33 +46,34 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const rows = await db
-    .select({ url: sources.url, tier: sourceScoreCache.tier })
-    .from(sources)
-    .innerJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
-    .where(
-      and(
-        isNull(sources.deletedAt),
-        eq(sources.approvalStatus, "approved"),
-        isNotNull(sourceScoreCache.tier),
-        isNotNull(sources.url),
-      ),
-    );
+  const payload = await dumpCache.get(async () => {
+    const rows = await db
+      .select({ url: sources.url, tier: sourceScoreCache.tier })
+      .from(sources)
+      .innerJoin(sourceScoreCache, eq(sources.id, sourceScoreCache.sourceId))
+      .where(
+        and(
+          isNull(sources.deletedAt),
+          eq(sources.approvalStatus, "approved"),
+          isNotNull(sourceScoreCache.tier),
+          isNotNull(sources.url),
+        ),
+      );
 
-  const entries = rows.map((row) => ({
-    urlHash: createHash("sha256")
-      .update(row.url as string)
-      .digest("hex")
-      .slice(0, 16),
-    tier: row.tier as number,
-  }));
+    const entries = rows.map((row) => ({
+      urlHash: createHash("sha256")
+        .update(row.url as string)
+        .digest("hex")
+        .slice(0, 16),
+      tier: row.tier as number,
+    }));
 
-  return Response.json(
-    {
+    return {
       generatedAt: new Date().toISOString(),
       count: entries.length,
       entries,
-    },
-    { status: 200, headers: CORS_HEADERS },
-  );
+    };
+  });
+
+  return Response.json(payload, { status: 200, headers: CORS_HEADERS });
 }

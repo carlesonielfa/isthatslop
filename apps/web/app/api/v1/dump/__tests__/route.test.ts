@@ -37,6 +37,14 @@ mock.module("@/lib/rate-limiter", () => ({
   RATE_LIMITS: { DUMP: { limit: 5, windowMs: 3600000 } },
 }));
 
+// Bypass caching in tests so each GET call hits the mock DB directly.
+mock.module("@/lib/endpoint-cache", () => ({
+  createEndpointCache: () => ({
+    get: (compute: () => Promise<unknown>) => compute(),
+    invalidate: () => {},
+  }),
+}));
+
 const { GET } = await import("@/app/api/v1/dump/route");
 
 function makeRequest(url: string): NextRequest {

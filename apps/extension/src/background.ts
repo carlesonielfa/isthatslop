@@ -35,7 +35,10 @@ async function refreshScoreCache(): Promise<void> {
       scoreCache[entry.urlHash] = entry.tier;
     }
     memCache = new Map(Object.entries(scoreCache));
-    await chrome.storage.local.set({ scoreCache, scoreCacheUpdatedAt: Date.now() });
+    await chrome.storage.local.set({
+      scoreCache,
+      scoreCacheUpdatedAt: Date.now(),
+    });
   } catch {
     // Silently keep stale cache on network error
   }
