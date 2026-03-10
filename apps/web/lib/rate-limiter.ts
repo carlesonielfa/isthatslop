@@ -101,4 +101,6 @@ export const RATE_LIMITS = {
   COMMENT_SUBMIT: { limit: 10, windowMs: 60 * 60 * 1000 },
   FLAG: { limit: 20, windowMs: 60 * 60 * 1000 },
   API_LOOKUP: { limit: 120, windowMs: 60 * 1000 }, // 120 req/min per IP for public endpoints
+  // 5 requests/hour per IP (dump is a full table scan)
+  DUMP: { limit: 5, windowMs: 60 * 60 * 1000 },
 } as const satisfies Record<string, RateLimitConfig>;

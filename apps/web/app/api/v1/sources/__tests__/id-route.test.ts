@@ -23,6 +23,11 @@ mock.module("drizzle-orm", () => ({
   isNull: mock(() => ({})),
 }));
 
+mock.module("@/lib/rate-limiter", () => ({
+  checkRateLimit: mock(() => ({ allowed: true, retryAfter: 0 })),
+  RATE_LIMITS: { API_LOOKUP: {} },
+}));
+
 const { GET } = await import("@/app/api/v1/sources/[id]/route");
 
 function makeRequest(

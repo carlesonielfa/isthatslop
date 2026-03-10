@@ -33,6 +33,11 @@ mock.module("drizzle-orm", () => ({
   sql: mock(() => ({})),
 }));
 
+mock.module("@/lib/rate-limiter", () => ({
+  checkRateLimit: mock(() => ({ allowed: true, retryAfter: 0 })),
+  RATE_LIMITS: { API_LOOKUP: {} },
+}));
+
 const { GET, normalizeUrl } = await import("@/app/api/v1/sources/route");
 
 function makeRequest(url: string): NextRequest {
