@@ -1,0 +1,5 @@
+[test]
+# Exclude turbo prune artifacts and other generated directories
+exclude = ["out/**", "node_modules/**", ".next/**"]
+# Preload server-only mock so DAL tests work when run from root
+preload = ["./apps/web/test-setup.ts"]
