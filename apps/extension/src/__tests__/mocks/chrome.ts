@@ -4,7 +4,8 @@
 export const chromeMock = {
   storage: {
     local: {
-      get: async (_keys: string | string[] | Record<string, unknown>) => ({} as Record<string, unknown>),
+      get: async (_keys: string | string[] | Record<string, unknown>) =>
+        ({}) as Record<string, unknown>,
       set: async (_items: Record<string, unknown>) => {},
     },
   },
@@ -18,7 +19,10 @@ export const chromeMock = {
     },
   },
   action: {
-    setIcon: async (_details: { tabId?: number; path: Record<string, string> }) => {},
+    setIcon: async (_details: {
+      tabId?: number;
+      path: Record<string, string>;
+    }) => {},
   },
   alarms: {
     create: async (_name: string, _config: unknown) => {},

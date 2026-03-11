@@ -1,8 +1,8 @@
-import { getIconPaths } from '../src/lib/icon-state';
+import { getIconPaths } from "../src/lib/icon-state";
 
-const ALARM_NAME = 'score-cache-refresh';
+const ALARM_NAME = "score-cache-refresh";
 const PERIOD_MINUTES = 24 * 60; // 1440 minutes
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://isthatslop.com';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "https://isthatslop.com";
 const DUMP_URL = `${API_BASE}/api/v1/dump`;
 
 // In-memory read-through cache (lost on service worker termination, rebuilt on startup)
@@ -10,20 +10,20 @@ let memCache: Map<string, number> | null = null;
 
 function normalizeUrl(raw: string): string {
   return raw
-    .replace(/^https?:\/\//i, '')
-    .replace(/^www\./, '')
-    .replace(/\/$/, '')
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./, "")
+    .replace(/\/$/, "")
     .toLowerCase();
 }
 
 async function computeUrlHash(url: string): Promise<string> {
   const normalized = normalizeUrl(url);
   const msgBuffer = new TextEncoder().encode(normalized);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
     .slice(0, 16);
 }
 
@@ -53,7 +53,7 @@ async function getTierForUrl(url: string): Promise<number | null> {
   if (memCache) {
     return memCache.get(hash) ?? null;
   }
-  const result = await chrome.storage.local.get('scoreCache');
+  const result = await chrome.storage.local.get("scoreCache");
   const cache = result.scoreCache as Record<string, number> | undefined;
   if (!cache) return null;
   memCache = new Map(Object.entries(cache));
@@ -65,7 +65,7 @@ async function getTierWithFallback(rawUrl: string): Promise<number | null> {
   const normalized = normalizeUrl(rawUrl);
   const tier = await getTierForUrl(normalized);
   if (tier !== null) return tier;
-  const slashIdx = normalized.indexOf('/');
+  const slashIdx = normalized.indexOf("/");
   if (slashIdx === -1) return null;
   return getTierForUrl(normalized.slice(0, slashIdx));
 }
@@ -92,7 +92,9 @@ export default defineBackground(() => {
   chrome.runtime.onStartup.addListener(async () => {
     const alarm = await chrome.alarms.get(ALARM_NAME);
     if (!alarm) {
-      await chrome.alarms.create(ALARM_NAME, { periodInMinutes: PERIOD_MINUTES });
+      await chrome.alarms.create(ALARM_NAME, {
+        periodInMinutes: PERIOD_MINUTES,
+      });
     }
   });
 
@@ -100,7 +102,7 @@ export default defineBackground(() => {
   // Request:  { type: 'GET_TIER', url: string }
   // Response: number | null  (tier index 0-4, or null if unscored)
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg.type === 'GET_TIER') {
+    if (msg.type === "GET_TIER") {
       void getTierForUrl(msg.url as string).then(sendResponse);
       return true; // keep channel open for async response
     }
@@ -110,7 +112,7 @@ export default defineBackground(() => {
   // Request:  { type: 'SET_ICON', tier: number | null }
   // Response: void
   chrome.runtime.onMessage.addListener((msg, sender, _sendResponse) => {
-    if (msg.type === 'SET_ICON' && sender.tab?.id) {
+    if (msg.type === "SET_ICON" && sender.tab?.id) {
       void chrome.action.setIcon({
         tabId: sender.tab.id,
         path: getIconPaths(msg.tier as number | null),
@@ -121,7 +123,7 @@ export default defineBackground(() => {
   // Update icon on every completed tab navigation (handles link clicks, back/forward).
   // The content script covers SPA navigation; this covers full page loads.
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url) {
+    if (changeInfo.status === "complete" && tab.url) {
       void getTierWithFallback(tab.url).then((tier) => {
         void chrome.action.setIcon({
           tabId,

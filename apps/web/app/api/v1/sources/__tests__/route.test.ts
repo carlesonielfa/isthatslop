@@ -115,7 +115,9 @@ describe("GET /api/v1/sources", () => {
     expect(normalizeUrl("http://reddit.com")).toBe("reddit.com");
     expect(normalizeUrl("reddit.com")).toBe("reddit.com");
     expect(normalizeUrl("HTTPS://Example.COM/path/")).toBe("example.com/path");
-    expect(normalizeUrl("https://www.reddit.com/r/Art/")).toBe("reddit.com/r/art");
+    expect(normalizeUrl("https://www.reddit.com/r/Art/")).toBe(
+      "reddit.com/r/art",
+    );
     expect(normalizeUrl("http://www.example.com")).toBe("example.com");
   });
 

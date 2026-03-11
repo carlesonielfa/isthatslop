@@ -1,11 +1,11 @@
-import type { SiteAdapter } from './types';
+import type { SiteAdapter } from "./types";
 
 // Selectors in priority order — may break on YouTube DOM updates
-const CHANNEL_SELECTORS = ['ytd-channel-name a', '#channel-name a'];
+const CHANNEL_SELECTORS = ["ytd-channel-name a", "#channel-name a"];
 
 // Poll for channel element up to 2s (10 × 200ms) — needed for SPA navigation
 async function waitForChannelElement(
-  doc: Pick<Document, 'querySelector'>,
+  doc: Pick<Document, "querySelector">,
   timeoutMs = 2000,
   intervalMs = 200,
 ): Promise<HTMLAnchorElement | null> {
@@ -28,7 +28,9 @@ async function waitForChannelElement(
 
 function normalizeChannelHref(href: string): string | null {
   // Extract path starting from /@ or /channel/ or /c/ — preserve original case for handle/ID
-  const match = href.match(/youtube\.com(\/@[^/?#]+|\/channel\/[^/?#]+|\/c\/[^/?#]+)/i);
+  const match = href.match(
+    /youtube\.com(\/@[^/?#]+|\/channel\/[^/?#]+|\/c\/[^/?#]+)/i,
+  );
   if (!match) return null;
   return `youtube.com${match[1]}`;
 }
@@ -40,7 +42,7 @@ export const youtubeAdapter: SiteAdapter = {
 
   async extractEntities(
     url: string,
-    document: Pick<Document, 'querySelector'>,
+    document: Pick<Document, "querySelector">,
   ): Promise<string[]> {
     const entities: string[] = [];
 
@@ -65,7 +67,7 @@ export const youtubeAdapter: SiteAdapter = {
       entities.push(`youtube.com${channelIdMatch[1]}`);
     }
 
-    entities.push('youtube.com');
+    entities.push("youtube.com");
 
     return entities;
   },

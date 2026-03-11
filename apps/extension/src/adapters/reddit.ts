@@ -1,14 +1,19 @@
-import type { SiteAdapter } from './types';
+import type { SiteAdapter } from "./types";
 
 // Selectors in priority order — may break on Reddit redesigns
-const AUTHOR_SELECTORS = ['[data-testid="post_author_link"]', 'a[href*="/user/"]'];
+const AUTHOR_SELECTORS = [
+  '[data-testid="post_author_link"]',
+  'a[href*="/user/"]',
+];
 
 function extractUsername(href: string): string | null {
   const match = href.match(/\/user\/([^/?#]+)/i);
   return match ? match[1].toLowerCase() : null;
 }
 
-function extractAuthorFromDoc(doc: Pick<Document, 'querySelector'>): string | null {
+function extractAuthorFromDoc(
+  doc: Pick<Document, "querySelector">,
+): string | null {
   for (const selector of AUTHOR_SELECTORS) {
     try {
       const el = doc.querySelector(selector) as HTMLAnchorElement | null;
@@ -30,13 +35,13 @@ export const redditAdapter: SiteAdapter = {
 
   async extractEntities(
     url: string,
-    document: Pick<Document, 'querySelector'>,
+    document: Pick<Document, "querySelector">,
   ): Promise<string[]> {
     const entities: string[] = [];
 
     // Parse subreddit from URL
     const subredditMatch = url.match(/\/r\/([^/?#]+)/i);
-    const isPostPage = url.includes('/comments/');
+    const isPostPage = url.includes("/comments/");
 
     if (isPostPage && subredditMatch) {
       // Try to extract author from DOM
@@ -51,7 +56,7 @@ export const redditAdapter: SiteAdapter = {
       entities.push(`reddit.com/r/${subredditMatch[1]}`);
     }
 
-    entities.push('reddit.com');
+    entities.push("reddit.com");
 
     return entities;
   },

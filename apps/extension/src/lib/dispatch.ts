@@ -3,20 +3,23 @@ export type SetIconFn = (tier: number | null) => void;
 
 export function normalizeUrl(url: string): string {
   return url
-    .replace(/^https?:\/\//i, '')
-    .replace(/^www\./, '')
-    .replace(/\/$/, '')
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./, "")
+    .replace(/\/$/, "")
     .toLowerCase();
 }
 
 export interface SiteAdapter {
   matches(url: string): boolean;
-  extractEntities(url: string, document: Pick<Document, 'querySelector'>): Promise<string[]>;
+  extractEntities(
+    url: string,
+    document: Pick<Document, "querySelector">,
+  ): Promise<string[]>;
 }
 
 export function buildUrlHierarchy(url: string): string[] {
   const normalized = normalizeUrl(url);
-  const slashIdx = normalized.indexOf('/');
+  const slashIdx = normalized.indexOf("/");
   if (slashIdx === -1) return [normalized]; // already just a domain
   const domain = normalized.slice(0, slashIdx);
   if (domain === normalized) return [normalized];
@@ -25,7 +28,7 @@ export function buildUrlHierarchy(url: string): string[] {
 
 export async function checkAndUpdateIcon(
   url: string,
-  doc: Pick<Document, 'querySelector'>,
+  doc: Pick<Document, "querySelector">,
   adapters: SiteAdapter[],
   getTier: GetTierFn,
   setIcon: SetIconFn,

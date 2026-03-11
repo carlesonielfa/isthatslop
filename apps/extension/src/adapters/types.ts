@@ -4,5 +4,8 @@
 
 export interface SiteAdapter {
   matches(url: string): boolean;
-  extractEntities(url: string, document: Pick<Document, 'querySelector'>): Promise<string[]>;
+  extractEntities(
+    url: string,
+    document: Pick<Document, "querySelector">,
+  ): Promise<string[]>;
 }

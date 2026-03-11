@@ -51,7 +51,10 @@ SET_ICON(3) → orange icon
 // apps/extension/src/adapters/types.ts
 export interface SiteAdapter {
   matches(url: string): boolean;
-  extractEntities(url: string, document: Pick<Document, 'querySelector'>): Promise<string[]>;
+  extractEntities(
+    url: string,
+    document: Pick<Document, "querySelector">,
+  ): Promise<string[]>;
 }
 ```
 
@@ -62,6 +65,7 @@ Return `true` for every URL this adapter should enrich. The URL is the raw `loca
 Return a priority-ordered array of normalized URLs (no scheme, lowercase, no trailing slash). Most specific first. The method is async because SPA pages may need DOM polling before author metadata renders.
 
 **Normalization convention:**
+
 ```
 https://Reddit.com/r/ML/  →  reddit.com/r/ml
 http://example.com        →  example.com
@@ -75,21 +79,24 @@ http://example.com        →  example.com
 
 ```typescript
 // apps/extension/src/adapters/example.ts
-import type { SiteAdapter } from './types';
+import type { SiteAdapter } from "./types";
 
 export const exampleAdapter: SiteAdapter = {
   matches(url: string): boolean {
-    return url.includes('example.com');
+    return url.includes("example.com");
   },
 
-  async extractEntities(url: string, document: Pick<Document, 'querySelector'>): Promise<string[]> {
+  async extractEntities(
+    url: string,
+    document: Pick<Document, "querySelector">,
+  ): Promise<string[]> {
     // Extract normalized entities from most specific to least specific
-    const authorEl = document.querySelector('[data-author]');
-    const author = authorEl?.getAttribute('data-author');
+    const authorEl = document.querySelector("[data-author]");
+    const author = authorEl?.getAttribute("data-author");
 
     const entities: string[] = [];
     if (author) entities.push(`example.com/user/${author.toLowerCase()}`);
-    entities.push('example.com'); // site-level fallback always last
+    entities.push("example.com"); // site-level fallback always last
     return entities;
   },
 };
@@ -99,21 +106,25 @@ export const exampleAdapter: SiteAdapter = {
 
 ```typescript
 // apps/extension/src/__tests__/adapters.test.ts
-import { exampleAdapter } from '../adapters/example';
+import { exampleAdapter } from "../adapters/example";
 
-describe('exampleAdapter', () => {
-  it('matches example.com URLs', () => {
-    expect(exampleAdapter.matches('https://example.com/post/123')).toBe(true);
-    expect(exampleAdapter.matches('https://other.com')).toBe(false);
+describe("exampleAdapter", () => {
+  it("matches example.com URLs", () => {
+    expect(exampleAdapter.matches("https://example.com/post/123")).toBe(true);
+    expect(exampleAdapter.matches("https://other.com")).toBe(false);
   });
 
-  it('extracts author and site fallback', async () => {
-    const doc = { querySelector: (sel: string) =>
-      sel === '[data-author]' ? { getAttribute: () => 'Alice' } : null
-    } as unknown as Pick<Document, 'querySelector'>;
+  it("extracts author and site fallback", async () => {
+    const doc = {
+      querySelector: (sel: string) =>
+        sel === "[data-author]" ? { getAttribute: () => "Alice" } : null,
+    } as unknown as Pick<Document, "querySelector">;
 
-    const entities = await exampleAdapter.extractEntities('https://example.com/post/1', doc);
-    expect(entities).toEqual(['example.com/user/alice', 'example.com']);
+    const entities = await exampleAdapter.extractEntities(
+      "https://example.com/post/1",
+      doc,
+    );
+    expect(entities).toEqual(["example.com/user/alice", "example.com"]);
   });
 });
 ```
@@ -122,9 +133,13 @@ describe('exampleAdapter', () => {
 
 ```typescript
 // apps/extension/src/adapters/registry.ts
-import { exampleAdapter } from './example';
+import { exampleAdapter } from "./example";
 
-export const registry: SiteAdapter[] = [redditAdapter, youtubeAdapter, exampleAdapter];
+export const registry: SiteAdapter[] = [
+  redditAdapter,
+  youtubeAdapter,
+  exampleAdapter,
+];
 ```
 
 ### Step 4: Verify
@@ -142,6 +157,7 @@ bun test apps/extension/src/__tests__/adapters.test.ts
 Matches: `reddit.com`
 
 Entity extraction:
+
 - **Post page** (`/comments/`): extracts post author from DOM → returns `[reddit.com/user/{author}, reddit.com/r/{sub}, reddit.com]`
 - **Subreddit page** (`/r/`): returns `[reddit.com/r/{sub}, reddit.com]`
 - **Other**: returns `['reddit.com']`
@@ -151,6 +167,7 @@ Entity extraction:
 Matches: `youtube.com`, `youtu.be`
 
 Entity extraction:
+
 - **Video page** (`/watch`): polls DOM for channel link → returns `[youtube.com/c/{channel}, youtube.com]`
 - **Channel page** (`/@` or `/channel/`): extracts from URL → returns `[youtube.com/@{handle}, youtube.com]`
 - **Other**: returns `['youtube.com']`
@@ -164,8 +181,9 @@ Reddit and YouTube DOM selectors are **low confidence**. Reddit redesigns freque
 If an adapter returns only the top-level site URL on every page, the selectors likely need updating. Test selectors against the current DOM before deploying changes.
 
 To debug adapter output, open the browser console on the target page and run:
+
 ```javascript
 // Check what entities the content script would extract
-document.querySelector('[data-author]')   // Reddit author example
-document.querySelector('ytd-channel-name a')  // YouTube channel example
+document.querySelector("[data-author]"); // Reddit author example
+document.querySelector("ytd-channel-name a"); // YouTube channel example
 ```
