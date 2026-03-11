@@ -8,7 +8,7 @@ const AUTHOR_SELECTORS = [
 
 function extractUsername(href: string): string | null {
   const match = href.match(/\/user\/([^/?#]+)/i);
-  return match ? match[1].toLowerCase() : null;
+  return match?.[1]?.toLowerCase() ?? null;
 }
 
 function extractAuthorFromDoc(
@@ -55,8 +55,6 @@ export const redditAdapter: SiteAdapter = {
       // Preserve subreddit name case (Reddit URLs are case-insensitive but display names use original case)
       entities.push(`reddit.com/r/${subredditMatch[1]}`);
     }
-
-    entities.push("reddit.com");
 
     return entities;
   },
