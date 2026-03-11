@@ -1,0 +1,16 @@
+{
+  "name": "extension",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "postinstall": "wxt prepare",
+    "generate-icons": "bun scripts/generate-icons.ts"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@napi-rs/canvas": "^0.1.96",
+    "wxt": "latest"
+  }
+}

@@ -1,3 +1,11 @@
+export function normalizeUrl(raw: string): string {
+  return raw
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./, "")
+    .replace(/\/$/, "")
+    .toLowerCase();
+}
+
 // Score calculation algorithm for claims-based tier system
 // Tiers are calculated algorithmically from aggregated claims, not voted directly
 

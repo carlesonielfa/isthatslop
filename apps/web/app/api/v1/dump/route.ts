@@ -6,6 +6,7 @@ import "server-only";
 import { createHash } from "crypto";
 import { db, sources, sourceScoreCache } from "@repo/database";
 import { eq, and, isNull, isNotNull } from "drizzle-orm";
+import { normalizeUrl } from "@repo/scoring";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 import { createEndpointCache } from "@/lib/endpoint-cache";
 import type { NextRequest } from "next/server";
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     const entries = rows.map((row) => ({
       urlHash: createHash("sha256")
-        .update(row.url as string)
+        .update(normalizeUrl(row.url as string))
         .digest("hex")
         .slice(0, 16),
       tier: row.tier as number,
