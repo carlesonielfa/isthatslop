@@ -110,11 +110,13 @@ describe("GET /api/v1/sources", () => {
     expect(body).not.toHaveProperty("createdByUserId");
   });
 
-  test("normalizeUrl strips scheme, lowercases, and trims trailing slash", () => {
+  test("normalizeUrl strips scheme, www, lowercases, and trims trailing slash", () => {
     expect(normalizeUrl("https://Reddit.com/")).toBe("reddit.com");
     expect(normalizeUrl("http://reddit.com")).toBe("reddit.com");
     expect(normalizeUrl("reddit.com")).toBe("reddit.com");
     expect(normalizeUrl("HTTPS://Example.COM/path/")).toBe("example.com/path");
+    expect(normalizeUrl("https://www.reddit.com/r/Art/")).toBe("reddit.com/r/art");
+    expect(normalizeUrl("http://www.example.com")).toBe("example.com");
   });
 
   test("returns tier:null when source has no score cache entry", async () => {

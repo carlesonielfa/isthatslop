@@ -21,6 +21,7 @@ const QuerySchema = z.object({
 export function normalizeUrl(raw: string): string {
   return raw
     .replace(/^https?:\/\//i, "")
+    .replace(/^www\./, "")
     .replace(/\/$/, "")
     .toLowerCase();
 }

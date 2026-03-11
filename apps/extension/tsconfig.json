@@ -1,0 +1,9 @@
+{
+  "extends": "../../packages/typescript-config/base.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "entrypoints", "wxt.config.ts", ".wxt/wxt.d.ts"]
+}
