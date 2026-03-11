@@ -1,0 +1,14 @@
+{
+  "name": "extension",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^0.1.96",
+    "wxt": "latest"
+  }
+}
