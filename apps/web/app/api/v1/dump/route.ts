@@ -14,6 +14,7 @@ function normalizeUrl(raw: string): string {
     .toLowerCase();
 }
 import { eq, and, isNull, isNotNull } from "drizzle-orm";
+import { normalizeUrl } from "@repo/scoring";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 import { createEndpointCache } from "@/lib/endpoint-cache";
 import type { NextRequest } from "next/server";

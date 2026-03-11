@@ -2,15 +2,9 @@
 // Run with: bun apps/extension/scripts/verify-dump-lookup.ts
 
 import { createHash } from "crypto";
+import { normalizeUrl } from "../src/lib/dispatch";
 
 const DUMP_URL = "http://localhost:3000/api/v1/dump";
-
-function normalizeUrl(raw: string): string {
-  return raw
-    .replace(/^https?:\/\//i, "")
-    .replace(/\/$/, "")
-    .toLowerCase();
-}
 
 // Note: uses Node's createHash (not Web Crypto) since this runs in Bun/Node, not a browser
 // service worker. Same SHA-256 algorithm, different API surface, identical output.
