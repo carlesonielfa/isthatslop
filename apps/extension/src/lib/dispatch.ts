@@ -34,9 +34,19 @@ export async function checkAndUpdateIcon(
   setIcon: SetIconFn,
 ): Promise<void> {
   const adapter = adapters.find((a) => a.matches(url));
-  const urls = adapter
+  const adapterEntities = adapter
     ? await adapter.extractEntities(url, doc)
-    : buildUrlHierarchy(url);
+    : [];
+  const urlHierarchy = buildUrlHierarchy(url);
+
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const u of [...adapterEntities, ...urlHierarchy]) {
+    if (!seen.has(u)) {
+      seen.add(u);
+      urls.push(u);
+    }
+  }
 
   let tier: number | null = null;
   for (const candidateUrl of urls) {

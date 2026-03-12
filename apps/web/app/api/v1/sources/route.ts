@@ -6,6 +6,7 @@ import { db, sources, sourceScoreCache } from "@repo/database";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
+import { normalizeUrl } from "@repo/scoring";
 
 const CORS_HEADERS = {
   // TODO: lock down to chrome-extension://<ID> once extension has a stable ID (Phase 12)
@@ -18,13 +19,7 @@ const QuerySchema = z.object({
   url: z.string().min(1).max(500),
 });
 
-export function normalizeUrl(raw: string): string {
-  return raw
-    .replace(/^https?:\/\//i, "")
-    .replace(/^www\./, "")
-    .replace(/\/$/, "")
-    .toLowerCase();
-}
+export { normalizeUrl };
 
 async function lookupSourceByUrl(normalizedUrl: string) {
   return db

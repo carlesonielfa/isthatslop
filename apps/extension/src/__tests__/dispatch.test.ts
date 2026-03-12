@@ -92,13 +92,14 @@ describe("checkAndUpdateIcon dispatch", () => {
     expect(setIcon).toHaveBeenCalledWith(null);
   });
 
-  it("uses adapter entities when adapter matches", async () => {
+  it("uses adapter entities when adapter matches, merged with buildUrlHierarchy", async () => {
+    // Adapter returns only specific entity (no domain) — dispatch appends buildUrlHierarchy
     const adapter = {
       matches: (_url: string) => true,
       extractEntities: async (
         _url: string,
         _doc: Pick<Document, "querySelector">,
-      ) => ["entity.com/specific", "entity.com"],
+      ) => ["entity.com/specific"],
     };
     const getTier = mock(async (url: string) =>
       url === "entity.com/specific" ? 2 : null,
@@ -111,17 +112,17 @@ describe("checkAndUpdateIcon dispatch", () => {
       getTier,
       setIcon,
     );
+    // entity.com/specific found first — stops early
     expect(setIcon).toHaveBeenCalledWith(2);
   });
 
   it("walks hierarchy and stops at first cache hit", async () => {
+    // Adapter returns ["miss.com/section"] (no domain); dispatch merges with
+    // buildUrlHierarchy("https://miss.com/page") = ["miss.com/page", "miss.com"]
+    // merged = ["miss.com/section", "miss.com/page", "miss.com"]
     const adapter = {
       matches: () => true,
-      extractEntities: async () => [
-        "miss.com/page",
-        "miss.com/section",
-        "miss.com",
-      ],
+      extractEntities: async () => ["miss.com/section"],
     };
     const getTier = mock(async (url: string) =>
       url === "miss.com/section" ? 1 : null,
@@ -134,14 +135,17 @@ describe("checkAndUpdateIcon dispatch", () => {
       getTier,
       setIcon,
     );
-    expect(getTier).toHaveBeenCalledTimes(2); // stopped after 2nd URL hit
+    expect(getTier).toHaveBeenCalledTimes(1); // miss.com/section hit on first try
     expect(setIcon).toHaveBeenCalledWith(1);
   });
 
   it("sends null when nothing in hierarchy matches cache", async () => {
+    // Adapter returns ["miss.com/a"] (no domain); merged = ["miss.com/a", "miss.com/a" (deduped), "miss.com"]
+    // Actually for URL "https://miss.com/a": buildUrlHierarchy = ["miss.com/a", "miss.com"]
+    // adapter returns ["miss.com/a"]; merged deduped = ["miss.com/a", "miss.com"]
     const adapter = {
       matches: () => true,
-      extractEntities: async () => ["miss.com/a", "miss.com"],
+      extractEntities: async () => ["miss.com/a"],
     };
     const getTier = mock(async (_url: string) => null);
     const setIcon = mock((_tier: number | null) => {});
@@ -153,5 +157,35 @@ describe("checkAndUpdateIcon dispatch", () => {
       setIcon,
     );
     expect(setIcon).toHaveBeenCalledWith(null);
+  });
+
+  it("deduplicates when adapter entity already present in buildUrlHierarchy", async () => {
+    // Adapter returns entity that matches the normalized URL from buildUrlHierarchy
+    // buildUrlHierarchy("https://entity.com/page") = ["entity.com/page", "entity.com"]
+    // adapter returns ["entity.com/page", "entity.com/extra"]
+    // merged deduped = ["entity.com/page", "entity.com/extra", "entity.com"]
+    const adapter = {
+      matches: () => true,
+      extractEntities: async () => ["entity.com/page", "entity.com/extra"],
+    };
+    const getTier = mock(async (_url: string) => null);
+    const setIcon = mock((_tier: number | null) => {});
+    await checkAndUpdateIcon(
+      "https://entity.com/page",
+      mockDoc,
+      [adapter],
+      getTier,
+      setIcon,
+    );
+    // "entity.com/page" only appears once in the call list
+    const calls = getTier.mock.calls.map((c: [string]) => c[0]);
+    expect(calls.filter((u: string) => u === "entity.com/page")).toHaveLength(
+      1,
+    );
+    expect(calls).toEqual([
+      "entity.com/page",
+      "entity.com/extra",
+      "entity.com",
+    ]);
   });
 });

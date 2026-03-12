@@ -67,8 +67,6 @@ export const youtubeAdapter: SiteAdapter = {
       entities.push(`youtube.com${channelIdMatch[1]}`);
     }
 
-    entities.push("youtube.com");
-
     return entities;
   },
 };

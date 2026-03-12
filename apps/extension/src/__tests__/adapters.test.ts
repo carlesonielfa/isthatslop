@@ -34,7 +34,7 @@ describe("Reddit adapter (ADPT-02)", () => {
     );
   });
 
-  it("extracts user + subreddit + site from a post page URL", async () => {
+  it("extracts user + subreddit from a post page URL (no domain)", async () => {
     const url = "https://reddit.com/r/MachineLearning/comments/abc123/title";
     const doc = makeDoc({
       '[data-testid="post_author_link"]': {
@@ -45,35 +45,34 @@ describe("Reddit adapter (ADPT-02)", () => {
     expect(entities).toEqual([
       "reddit.com/user/alice",
       "reddit.com/r/MachineLearning",
-      "reddit.com",
     ]);
   });
 
-  it("extracts subreddit + site from a post page URL when author is missing", async () => {
+  it("extracts subreddit from a post page URL when author is missing (no domain)", async () => {
     const url = "https://reddit.com/r/MachineLearning/comments/abc123/title";
     const entities = await redditAdapter.extractEntities(
       url,
       emptyDoc as Document,
     );
-    expect(entities).toEqual(["reddit.com/r/MachineLearning", "reddit.com"]);
+    expect(entities).toEqual(["reddit.com/r/MachineLearning"]);
   });
 
-  it("extracts subreddit + site from a subreddit page URL", async () => {
+  it("extracts subreddit from a subreddit page URL (no domain)", async () => {
     const url = "https://reddit.com/r/MachineLearning/";
     const entities = await redditAdapter.extractEntities(
       url,
       emptyDoc as Document,
     );
-    expect(entities).toEqual(["reddit.com/r/MachineLearning", "reddit.com"]);
+    expect(entities).toEqual(["reddit.com/r/MachineLearning"]);
   });
 
-  it('falls back to ["reddit.com"] for other reddit pages', async () => {
+  it("returns [] for other reddit pages (no enrichment entities)", async () => {
     const url = "https://reddit.com/";
     const entities = await redditAdapter.extractEntities(
       url,
       emptyDoc as Document,
     );
-    expect(entities).toEqual(["reddit.com"]);
+    expect(entities).toEqual([]);
   });
 });
 
@@ -90,7 +89,7 @@ describe("YouTube adapter (ADPT-03)", () => {
     expect(youtubeAdapter.matches("https://reddit.com")).toBe(false);
   });
 
-  it("extracts channel + site from a video URL when channel DOM is available", async () => {
+  it("extracts channel from a video URL when channel DOM is available (no domain)", async () => {
     const url = "https://youtube.com/watch?v=abc123";
     const doc = makeDoc({
       "ytd-channel-name a": {
@@ -100,42 +99,42 @@ describe("YouTube adapter (ADPT-03)", () => {
       "#channel-name a": null,
     });
     const entities = await youtubeAdapter.extractEntities(url, doc as Document);
-    expect(entities).toEqual(["youtube.com/@MyChannel", "youtube.com"]);
+    expect(entities).toEqual(["youtube.com/@MyChannel"]);
   });
 
-  it('falls back to ["youtube.com"] for a video URL with no channel DOM', async () => {
+  it("returns [] for a video URL with no channel DOM", async () => {
     const url = "https://youtube.com/watch?v=abc123";
     const entities = await youtubeAdapter.extractEntities(
       url,
       emptyDoc as Document,
     );
-    expect(entities).toEqual(["youtube.com"]);
+    expect(entities).toEqual([]);
   });
 
-  it("extracts channel + site from a channel page URL (handle)", async () => {
+  it("extracts channel from a channel page URL (handle) (no domain)", async () => {
     const url = "https://youtube.com/@MyChannel";
     const entities = await youtubeAdapter.extractEntities(
       url,
       emptyDoc as Document,
     );
-    expect(entities).toEqual(["youtube.com/@MyChannel", "youtube.com"]);
+    expect(entities).toEqual(["youtube.com/@MyChannel"]);
   });
 
-  it("extracts channel + site from a channel page URL (channel/ID)", async () => {
+  it("extracts channel from a channel page URL (channel/ID) (no domain)", async () => {
     const url = "https://youtube.com/channel/UCabc123";
     const entities = await youtubeAdapter.extractEntities(
       url,
       emptyDoc as Document,
     );
-    expect(entities).toEqual(["youtube.com/channel/UCabc123", "youtube.com"]);
+    expect(entities).toEqual(["youtube.com/channel/UCabc123"]);
   });
 
-  it('falls back to ["youtube.com"] for other youtube pages', async () => {
+  it("returns [] for other youtube pages", async () => {
     const url = "https://youtube.com/feed/subscriptions";
     const entities = await youtubeAdapter.extractEntities(
       url,
       emptyDoc as Document,
     );
-    expect(entities).toEqual(["youtube.com"]);
+    expect(entities).toEqual([]);
   });
 });

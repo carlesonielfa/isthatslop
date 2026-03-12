@@ -5,12 +5,7 @@ const DUMP_URL = "https://isthatslop.com/api/v1/dump";
 // In-memory read-through cache (lost on service worker termination, rebuilt on startup)
 let memCache: Map<string, number> | null = null;
 
-function normalizeUrl(raw: string): string {
-  return raw
-    .replace(/^https?:\/\//i, "")
-    .replace(/\/$/, "")
-    .toLowerCase();
-}
+import { normalizeUrl } from "./lib/dispatch";
 
 async function computeUrlHash(url: string): Promise<string> {
   const normalized = normalizeUrl(url);
