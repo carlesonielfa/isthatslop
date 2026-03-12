@@ -21,7 +21,6 @@
       "name": "extension",
       "version": "0.1.0",
       "devDependencies": {
-        "@fontsource/inter": "^5.2.8",
         "@napi-rs/canvas": "^0.1.96",
         "wxt": "latest",
       },

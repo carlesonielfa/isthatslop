@@ -5,6 +5,14 @@
 import "server-only";
 import { createHash } from "crypto";
 import { db, sources, sourceScoreCache } from "@repo/database";
+
+function normalizeUrl(raw: string): string {
+  return raw
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./, "")
+    .replace(/\/$/, "")
+    .toLowerCase();
+}
 import { eq, and, isNull, isNotNull } from "drizzle-orm";
 import { normalizeUrl } from "@repo/scoring";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
