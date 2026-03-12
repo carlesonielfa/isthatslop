@@ -1,9 +1,4 @@
-const API_BASE =
-  typeof import.meta !== "undefined" &&
-  typeof (import.meta as Record<string, unknown>).env !== "undefined"
-    ? ((import.meta as Record<string, Record<string, unknown>>).env
-        .VITE_API_BASE_URL ?? "https://isthatslop.com")
-    : "https://isthatslop.com";
+import { API_BASE } from "../../src/lib/env";
 
 export function renderAuthState(
   token: string | null,

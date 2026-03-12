@@ -1,7 +1,7 @@
 // Cookie-based auth for Chrome extension (MV3)
 // Extension service workers bypass CORS with host_permissions — no server CORS config needed.
 
-const API_BASE = "https://isthatslop.com";
+import { API_BASE } from "./env";
 
 const COOKIE_URL = API_BASE;
 const COOKIE_NAME_PROD = "__Secure-better-auth.session_token";

@@ -1,6 +1,8 @@
+import { API_BASE } from "./lib/env";
+
 const ALARM_NAME = "score-cache-refresh";
 const PERIOD_MINUTES = 24 * 60; // 1440 minutes
-const DUMP_URL = "https://isthatslop.com/api/v1/dump";
+const DUMP_URL = `${API_BASE}/api/v1/dump`;
 
 // In-memory read-through cache (lost on service worker termination, rebuilt on startup)
 let memCache: Map<string, number> | null = null;

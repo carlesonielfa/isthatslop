@@ -1,8 +1,7 @@
 import { TIER_COLORS, TIER_NAMES } from "../../src/lib/tiers";
 import { normalizeUrl } from "../../src/lib/dispatch";
 import { checkAuth } from "../../src/lib/auth";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "https://isthatslop.com";
+import { API_BASE } from "../../src/lib/env";
 
 /**
  * Returns a plain-object descriptor for the sign-in button.
@@ -16,7 +15,7 @@ export function createSignInButton(): {
   className: string;
 } {
   return {
-    href: "https://isthatslop.com/login",
+    href: `${API_BASE}/login`,
     target: "_blank",
     textContent: "Sign in to submit claims",
     className: "sign-in-btn",
@@ -45,7 +44,7 @@ function renderScored(
       <span class="tier-badge" style="background:${TIER_COLORS[tier]}">${TIER_NAMES[tier]}</span>
     </div>
     <div style="margin-top:8px; color: var(--muted-foreground); font-size:11px">${claimCount} claim${claimCount !== 1 ? "s" : ""}</div>
-    <a class="source-link" href="https://isthatslop.com/sources/${sourceId}" target="_blank">${sourceName}</a>
+    <a class="source-link" href="${API_BASE}/sources/${sourceId}" target="_blank">${sourceName}</a>
   `;
 }
 
@@ -53,7 +52,7 @@ function renderUnscored(): void {
   const content = document.getElementById("content")!;
   content.innerHTML = `
     <div style="color: var(--muted-foreground)">This source hasn't been rated yet.</div>
-    <a class="source-link" href="https://isthatslop.com" target="_blank">Submit on IsThatSlop</a>
+    <a class="source-link" href="${API_BASE}" target="_blank">Submit on IsThatSlop</a>
   `;
 }
 
