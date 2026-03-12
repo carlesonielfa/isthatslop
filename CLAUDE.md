@@ -18,7 +18,9 @@ bun run dev
 # Build all apps and packages
 bun run build
 
-# Run tests
+# Run tests (always use this — NOT `bun test`)
+# `bun run test` runs Turbo → each workspace uses its own bunfig.toml with correct preloads
+# `bun test` from root bypasses workspace configs and will fail
 bun run test
 
 # Linting and formatting

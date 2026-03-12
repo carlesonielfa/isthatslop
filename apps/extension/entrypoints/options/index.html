@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>IsThatSlop — Options</title>
+  <style>
+    :root {
+      --background: rgb(127 177 179);
+      --card: rgb(192 192 192);
+      --primary: rgb(127 177 179);
+      --primary-foreground: oklch(0.98 0.02 201);
+      --foreground: oklch(0.141 0.005 285.823);
+      --border: rgb(247 247 247);
+      --border-dark: rgb(96 96 96);
+      --muted-foreground: oklch(36.189% 0.00856 285.902);
+    }
+
+    body {
+      width: 420px;
+      margin: 24px auto;
+      font-size: 12px;
+      font-family: system-ui, sans-serif;
+      background: var(--background);
+    }
+
+    .window {
+      border-top-color: var(--border);
+      border-left-color: var(--border);
+      border-bottom-color: var(--border-dark);
+      border-right-color: var(--border-dark);
+      border-width: 2px;
+      border-style: solid;
+    }
+
+    .title-bar {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      padding: 4px 8px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .window-body {
+      padding: 12px;
+      background: var(--card);
+    }
+
+    .section-label {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--foreground);
+    }
+
+    #auth-status {
+      color: var(--foreground);
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 11px;
+      background: var(--card);
+      border-top-color: var(--border);
+      border-left-color: var(--border);
+      border-bottom-color: var(--border-dark);
+      border-right-color: var(--border-dark);
+      border-width: 1px;
+      border-style: solid;
+      text-decoration: none;
+      color: var(--foreground);
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn:active {
+      border-top-color: var(--border-dark);
+      border-left-color: var(--border-dark);
+      border-bottom-color: var(--border);
+      border-right-color: var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="title-bar">IsThatSlop — Options</div>
+    <div class="window-body">
+      <div class="section-label">Account</div>
+      <div id="auth-status">Loading...</div>
+    </div>
+  </div>
+  <script type="module" src="./index.ts"></script>
+</body>
+</html>
