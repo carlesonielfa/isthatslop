@@ -8,9 +8,8 @@ import { chromeMock } from "./mocks/chrome";
 describe("signOut", () => {
   it("removes authToken, username, userId from chrome.storage.local", async () => {
     const removed: Array<string | string[]> = [];
-    const originalRemove = (
-      chromeMock.storage.local as Record<string, unknown>
-    ).remove;
+    const originalRemove = (chromeMock.storage.local as Record<string, unknown>)
+      .remove;
     (chromeMock.storage.local as Record<string, unknown>).remove = async (
       keys: string | string[],
     ) => {
@@ -30,9 +29,8 @@ describe("signOut", () => {
 
   it("leaves other storage keys (scoreCache, scoreCacheUpdatedAt) untouched", async () => {
     const removed: Array<string | string[]> = [];
-    const originalRemove = (
-      chromeMock.storage.local as Record<string, unknown>
-    ).remove;
+    const originalRemove = (chromeMock.storage.local as Record<string, unknown>)
+      .remove;
     (chromeMock.storage.local as Record<string, unknown>).remove = async (
       keys: string | string[],
     ) => {

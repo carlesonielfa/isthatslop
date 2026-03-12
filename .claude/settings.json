@@ -19,7 +19,7 @@
       "Bash(date:*)",
       "Bash(echo:*)",
       "Bash(cat:*)",
-      "Bash(ls:*)",
+      "Bash(find:*)",
       "Bash(mkdir:*)",
       "Bash(wc:*)",
       "Bash(head:*)",
