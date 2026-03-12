@@ -3,27 +3,12 @@ import { normalizeUrl } from "../../src/lib/dispatch";
 import { checkAuth } from "../../src/lib/auth";
 import { API_BASE } from "../../src/lib/env";
 
-/**
- * Returns a plain-object descriptor for the sign-in button.
- * Kept as a pure helper so it can be unit-tested in Bun without a DOM.
- * The actual DOM element is built in appendSignInButton().
- */
-export function createSignInButton(): {
-  href: string;
-  target: string;
-  textContent: string;
-  className: string;
-} {
-  return {
-    href: `${API_BASE}/login`,
-    target: "_blank",
-    textContent: "Sign in to submit claims",
-    className: "sign-in-btn",
-  };
-}
-
-function signInHtml(): string {
-  return `<a class="sign-in-btn" href="${API_BASE}/login" target="_blank">Sign in to submit claims</a>`;
+/** Returns the auth action HTML snippet — sign-in link or submit-claim link. Exported for tests. */
+export function authActionHtml(showSignIn: boolean): string {
+  if (showSignIn) {
+    return `<a class="sign-in-btn" href="${API_BASE}/login" target="_blank">Sign in to submit claims</a>`;
+  }
+  return `<a class="sign-in-btn" href="${API_BASE}/claims/new" target="_blank">Submit a claim</a>`;
 }
 
 function renderScored(
@@ -40,7 +25,7 @@ function renderScored(
     </div>
     <div style="margin-top:8px; color: var(--muted-foreground); font-size:11px">${claimCount} claim${claimCount !== 1 ? "s" : ""}</div>
     <a class="source-link" href="${API_BASE}/sources/${sourceId}" target="_blank">${sourceName}</a>
-    ${showSignIn ? signInHtml() : ""}
+    ${authActionHtml(showSignIn)}
   `;
 }
 
@@ -49,7 +34,7 @@ function renderUnscored(showSignIn: boolean): void {
   content.innerHTML = `
     <div style="color: var(--muted-foreground)">This source hasn't been rated yet.</div>
     <a class="source-link" href="${API_BASE}" target="_blank">Submit on IsThatSlop</a>
-    ${showSignIn ? signInHtml() : ""}
+    ${authActionHtml(showSignIn)}
   `;
 }
 
