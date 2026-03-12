@@ -1,5 +1,5 @@
 // Chrome API mock shim for extension unit tests
-// Covers: chrome.storage.local, chrome.runtime, chrome.action, chrome.alarms
+// Covers: chrome.storage.local, chrome.runtime, chrome.action, chrome.alarms, chrome.cookies
 
 export const chromeMock = {
   storage: {
@@ -7,6 +7,7 @@ export const chromeMock = {
       get: async (_keys: string | string[] | Record<string, unknown>) =>
         ({}) as Record<string, unknown>,
       set: async (_items: Record<string, unknown>) => {},
+      remove: async (_keys: string | string[]) => {},
     },
   },
   runtime: {
@@ -30,6 +31,10 @@ export const chromeMock = {
     onAlarm: {
       addListener: (_fn: unknown) => {},
     },
+  },
+  cookies: {
+    get: async (_details: { url: string; name: string }) =>
+      null as { value: string } | null,
   },
 };
 

@@ -9,7 +9,14 @@ export default defineConfig({
     name: "IsThatSlop",
     version: "0.1.0",
     description: "Alerts you to AI-flagged content sources",
-    permissions: ["alarms", "storage", "unlimitedStorage", "activeTab", "tabs"],
+    permissions: [
+      "alarms",
+      "storage",
+      "unlimitedStorage",
+      "activeTab",
+      "tabs",
+      "cookies",
+    ],
     host_permissions: [
       "https://isthatslop.com/*",
       "http://localhost:3000/*",

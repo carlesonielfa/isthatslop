@@ -22,8 +22,8 @@ On every page load or SPA navigation:
 
 1. Content script calls `checkAndUpdateIcon(url, document, registry, getTier, setIcon)`
 2. The registry is walked — the first adapter where `adapter.matches(url) === true` is selected
-3. **No adapter match:** entity list = `buildUrlHierarchy(url)` (normalized URL + domain)
-4. **Adapter match:** entity list = adapter entities (most specific first) + `buildUrlHierarchy(url)` appended and deduped
+3. **No adapter match:** entity list = `[normalizeUrl(url)]` (plain normalized URL)
+4. **Adapter match:** entity list = `await adapter.extractEntities(url, document)` (priority-ordered)
 5. Content script walks the entity list, calls `GET_TIER` for each URL, stops at first non-null result
 6. Calls `SET_ICON` with the tier (or `null` for neutral/grey)
 
@@ -35,16 +35,7 @@ Adapter: RedditAdapter.matches("reddit.com/...") → true
 extractEntities → [
   "reddit.com/user/some_author",   // most specific — check first
   "reddit.com/r/machinelearning",  // subreddit fallback
-]
-dispatch appends buildUrlHierarchy → [
-  "reddit.com/r/machinelearning/comments/abc123/title",  // normalized page URL
-  "reddit.com"                                           // domain fallback
-]
-final entity list → [
-  "reddit.com/user/some_author",
-  "reddit.com/r/machinelearning",
-  "reddit.com/r/machinelearning/comments/abc123/title",
-  "reddit.com"
+  "reddit.com"                     // site fallback
 ]
 Cache lookup:
   reddit.com/user/some_author → null (not scored)
@@ -105,7 +96,7 @@ export const exampleAdapter: SiteAdapter = {
 
     const entities: string[] = [];
     if (author) entities.push(`example.com/user/${author.toLowerCase()}`);
-    // No need to push the site domain — dispatch appends buildUrlHierarchy() automatically
+    entities.push("example.com"); // site-level fallback always last
     return entities;
   },
 };
@@ -133,7 +124,7 @@ describe("exampleAdapter", () => {
       "https://example.com/post/1",
       doc,
     );
-    expect(entities).toEqual(["example.com/user/alice"]);
+    expect(entities).toEqual(["example.com/user/alice", "example.com"]);
   });
 });
 ```
@@ -167,9 +158,9 @@ Matches: `reddit.com`
 
 Entity extraction:
 
-- **Post page** (`/comments/`): extracts post author from DOM → returns `[reddit.com/user/{author}, reddit.com/r/{sub}]`
-- **Subreddit page** (`/r/`): returns `[reddit.com/r/{sub}]`
-- **Other**: returns `[]` (dispatch falls back to `buildUrlHierarchy`)
+- **Post page** (`/comments/`): extracts post author from DOM → returns `[reddit.com/user/{author}, reddit.com/r/{sub}, reddit.com]`
+- **Subreddit page** (`/r/`): returns `[reddit.com/r/{sub}, reddit.com]`
+- **Other**: returns `['reddit.com']`
 
 ### YouTube (`apps/extension/src/adapters/youtube.ts`)
 
@@ -177,9 +168,9 @@ Matches: `youtube.com`, `youtu.be`
 
 Entity extraction:
 
-- **Video page** (`/watch`): polls DOM for channel link → returns `[youtube.com/c/{channel}]`
-- **Channel page** (`/@` or `/channel/`): extracts from URL → returns `[youtube.com/@{handle}]`
-- **Other**: returns `[]` (dispatch falls back to `buildUrlHierarchy`)
+- **Video page** (`/watch`): polls DOM for channel link → returns `[youtube.com/c/{channel}, youtube.com]`
+- **Channel page** (`/@` or `/channel/`): extracts from URL → returns `[youtube.com/@{handle}, youtube.com]`
+- **Other**: returns `['youtube.com']`
 
 ---
 

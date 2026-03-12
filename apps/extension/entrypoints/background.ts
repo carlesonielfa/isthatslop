@@ -1,9 +1,9 @@
 import { getIconPaths } from "../src/lib/icon-state";
 import { normalizeUrl } from "../src/lib/dispatch";
+import { API_BASE } from "../src/lib/env";
 
 const ALARM_NAME = "score-cache-refresh";
 const PERIOD_MINUTES = 24 * 60; // 1440 minutes
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "https://isthatslop.com";
 const DUMP_URL = `${API_BASE}/api/v1/dump`;
 
 // In-memory read-through cache (lost on service worker termination, rebuilt on startup)
