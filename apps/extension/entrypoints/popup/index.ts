@@ -4,11 +4,14 @@ import { checkAuth } from "../../src/lib/auth";
 import { API_BASE } from "../../src/lib/env";
 
 /** Returns the auth action HTML snippet — sign-in link or submit-claim link. Exported for tests. */
-export function authActionHtml(showSignIn: boolean): string {
+export function authActionHtml(showSignIn: boolean, sourceId?: string): string {
   if (showSignIn) {
     return `<a class="sign-in-btn" href="${API_BASE}/login" target="_blank">Sign in to submit claims</a>`;
   }
-  return `<a class="sign-in-btn" href="${API_BASE}/claims/new" target="_blank">Submit a claim</a>`;
+  const claimUrl = sourceId
+    ? `${API_BASE}/claims/new?source=${encodeURIComponent(sourceId)}`
+    : `${API_BASE}/claims/new`;
+  return `<a class="sign-in-btn" href="${claimUrl}" target="_blank">Submit a claim</a>`;
 }
 
 function renderScored(
@@ -25,7 +28,7 @@ function renderScored(
     </div>
     <div style="margin-top:8px; color: var(--muted-foreground); font-size:11px">${claimCount} claim${claimCount !== 1 ? "s" : ""}</div>
     <a class="source-link" href="${API_BASE}/sources/${sourceId}" target="_blank">${sourceName}</a>
-    ${authActionHtml(showSignIn)}
+    ${authActionHtml(showSignIn, sourceId)}
   `;
 }
 
