@@ -22,14 +22,8 @@ export function createSignInButton(): {
   };
 }
 
-function appendSignInButton(container: HTMLElement): void {
-  const descriptor = createSignInButton();
-  const btn = document.createElement("a");
-  btn.href = descriptor.href;
-  btn.target = descriptor.target;
-  btn.textContent = descriptor.textContent;
-  btn.className = descriptor.className;
-  container.appendChild(btn);
+function signInHtml(): string {
+  return `<a class="sign-in-btn" href="${API_BASE}/login" target="_blank">Sign in to submit claims</a>`;
 }
 
 function renderScored(
@@ -37,6 +31,7 @@ function renderScored(
   sourceName: string,
   claimCount: number,
   sourceId: string,
+  showSignIn: boolean,
 ): void {
   const content = document.getElementById("content")!;
   content.innerHTML = `
@@ -45,23 +40,28 @@ function renderScored(
     </div>
     <div style="margin-top:8px; color: var(--muted-foreground); font-size:11px">${claimCount} claim${claimCount !== 1 ? "s" : ""}</div>
     <a class="source-link" href="${API_BASE}/sources/${sourceId}" target="_blank">${sourceName}</a>
+    ${showSignIn ? signInHtml() : ""}
   `;
 }
 
-function renderUnscored(): void {
+function renderUnscored(showSignIn: boolean): void {
   const content = document.getElementById("content")!;
   content.innerHTML = `
     <div style="color: var(--muted-foreground)">This source hasn't been rated yet.</div>
     <a class="source-link" href="${API_BASE}" target="_blank">Submit on IsThatSlop</a>
+    ${showSignIn ? signInHtml() : ""}
   `;
 }
 
 async function main(): Promise<void> {
+  const token = await checkAuth();
+  const showSignIn = !token;
+
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const tab = tabs[0];
     if (!tab?.url) {
-      renderUnscored();
+      renderUnscored(showSignIn);
     } else {
       const normalized = normalizeUrl(tab.url);
       const tier = (await chrome.runtime.sendMessage({
@@ -70,10 +70,10 @@ async function main(): Promise<void> {
       })) as number | null;
 
       if (tier === null) {
-        renderUnscored();
+        renderUnscored(showSignIn);
       } else {
         // Render tier immediately from cache (no API needed)
-        renderScored(tier, normalized, 0, "");
+        renderScored(tier, normalized, 0, "", showSignIn);
 
         // Fetch source details from API for name and claim count
         try {
@@ -86,27 +86,18 @@ async function main(): Promise<void> {
               name: string;
               claimCount: number;
             };
-            renderScored(tier, data.name, data.claimCount, data.id);
+            renderScored(tier, data.name, data.claimCount, data.id, showSignIn);
           } else {
-            renderScored(tier, normalized, 0, "");
+            renderScored(tier, normalized, 0, "", showSignIn);
           }
         } catch {
-          renderScored(tier, normalized, 0, "");
+          renderScored(tier, normalized, 0, "", showSignIn);
         }
       }
     }
   } catch {
     const content = document.getElementById("content");
     if (content) content.textContent = "Unable to load data.";
-  }
-
-  // Auth check — show sign-in button for unauthenticated users
-  const token = await checkAuth();
-  if (!token) {
-    const content = document.getElementById("content");
-    if (content) {
-      appendSignInButton(content);
-    }
   }
 }
 
