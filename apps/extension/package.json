@@ -6,7 +6,8 @@
     "dev": "wxt",
     "build": "wxt build",
     "postinstall": "wxt prepare",
-    "generate-icons": "bun scripts/generate-icons.ts"
+    "generate-icons": "bun scripts/generate-icons.ts",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@isthatslop/validation": "*"
