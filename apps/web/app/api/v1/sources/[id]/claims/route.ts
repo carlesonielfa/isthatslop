@@ -33,8 +33,10 @@ export async function OPTIONS() {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id: sourceId } = await params;
+
   // Auth check
   const authResult = await requireAuth(request);
   if (!authResult.ok) {
@@ -45,7 +47,7 @@ export async function POST(
   }
 
   // Validate source ID
-  if (!isUuid(params.id)) {
+  if (!isUuid(sourceId)) {
     return Response.json(
       { error: "Invalid source ID" },
       { status: 400, headers: CORS_HEADERS },
@@ -127,7 +129,7 @@ export async function POST(
   const sourceRows = await db
     .select({ id: sources.id })
     .from(sources)
-    .where(and(eq(sources.id, params.id), isNull(sources.deletedAt)))
+    .where(and(eq(sources.id, sourceId), isNull(sources.deletedAt)))
     .limit(1);
 
   if (!sourceRows[0]) {
@@ -141,7 +143,7 @@ export async function POST(
   const inserted = await db
     .insert(claims)
     .values({
-      sourceId: params.id,
+      sourceId: sourceId,
       userId: authResult.userId,
       content: parsed.data.content,
       impact: parsed.data.impact,
@@ -150,7 +152,7 @@ export async function POST(
     .returning({ id: claims.id });
 
   return Response.json(
-    { claimId: inserted[0].id, sourceId: params.id },
+    { claimId: inserted[0]!.id, sourceId: sourceId },
     { status: 201, headers: CORS_HEADERS },
   );
 }
