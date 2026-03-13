@@ -8,6 +8,9 @@
     "postinstall": "wxt prepare",
     "generate-icons": "bun scripts/generate-icons.ts"
   },
+  "dependencies": {
+    "@isthatslop/validation": "*"
+  },
   "devDependencies": {
     "@fontsource/inter": "^5.2.8",
     "@napi-rs/canvas": "^0.1.96",
