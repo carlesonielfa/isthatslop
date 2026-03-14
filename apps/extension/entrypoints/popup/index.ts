@@ -8,6 +8,7 @@ export function authActionHtml(
   showSignIn: boolean,
   sourceId?: string,
   tabUrl?: string,
+  tabTitle?: string,
 ): string {
   if (showSignIn) {
     return `<a class="sign-in-btn" href="${API_BASE}/login" target="_blank">Sign in to submit claims</a>`;
@@ -16,10 +17,12 @@ export function authActionHtml(
     const claimUrl = `${API_BASE}/claims/new?source=${encodeURIComponent(sourceId)}`;
     return `<a class="sign-in-btn" href="${claimUrl}" target="_blank">Submit a claim</a>`;
   }
-  // Unscored source — forward to new source page with URL pre-filled
-  const newSourceUrl = tabUrl
-    ? `${API_BASE}/sources/new?url=${encodeURIComponent(tabUrl)}`
-    : `${API_BASE}/sources/new`;
+  // Unscored source — forward to new source page with URL and name pre-filled
+  const params = new URLSearchParams();
+  if (tabUrl) params.set("url", tabUrl);
+  if (tabTitle) params.set("name", tabTitle);
+  const qs = params.toString();
+  const newSourceUrl = `${API_BASE}/sources/new${qs ? `?${qs}` : ""}`;
   return `<a class="sign-in-btn" href="${newSourceUrl}" target="_blank">Add source &amp; claim</a>`;
 }
 
@@ -43,13 +46,17 @@ function renderScored(
   `;
 }
 
-function renderUnscored(showSignIn: boolean, tabUrl?: string): void {
+function renderUnscored(
+  showSignIn: boolean,
+  tabUrl?: string,
+  tabTitle?: string,
+): void {
   if (typeof document === "undefined") return;
 
   const content = document.getElementById("content")!;
   content.innerHTML = `
     <div style="color: var(--muted-foreground)">This source hasn't been rated yet.</div>
-    ${authActionHtml(showSignIn, undefined, tabUrl)}
+    ${authActionHtml(showSignIn, undefined, tabUrl, tabTitle)}
   `;
 }
 
@@ -71,7 +78,7 @@ async function main(): Promise<void> {
       })) as number | null;
 
       if (tier === null) {
-        renderUnscored(showSignIn, tab.url);
+        renderUnscored(showSignIn, tab.url, tab.title);
       } else {
         // Render tier immediately from cache (no API needed)
         renderScored(tier, normalized, 0, "", showSignIn);

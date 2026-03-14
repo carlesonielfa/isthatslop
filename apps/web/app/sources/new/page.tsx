@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
 
 interface SourcesNewPageProps {
-  searchParams: Promise<{ url?: string }>;
+  searchParams: Promise<{ url?: string; name?: string }>;
 }
 
 export default async function SourcesNewPage({
   searchParams,
 }: SourcesNewPageProps) {
-  const { url } = await searchParams;
-  redirect(`/claims/new${url ? `?url=${encodeURIComponent(url)}` : ""}`);
+  const { url, name } = await searchParams;
+  const params = new URLSearchParams();
+  if (url) params.set("url", url);
+  if (name) params.set("name", name);
+  const qs = params.toString();
+  redirect(`/claims/new${qs ? `?${qs}` : ""}`);
 }

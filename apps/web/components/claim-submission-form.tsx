@@ -37,11 +37,13 @@ interface ClaimSubmissionFormProps {
     claimCount: number;
   } | null;
   prefillUrl?: string;
+  prefillName?: string;
 }
 
 export function ClaimSubmissionForm({
   preselectedSource,
   prefillUrl,
+  prefillName,
 }: ClaimSubmissionFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -73,7 +75,7 @@ export function ClaimSubmissionForm({
   const [isCreatingNewSource, setIsCreatingNewSource] = useState(
     !!prefillUrl && !preselectedSource,
   );
-  const [newSourceName, setNewSourceName] = useState("");
+  const [newSourceName, setNewSourceName] = useState(prefillName ?? "");
   const [newSourceType, setNewSourceType] = useState("");
   const [newSourceDescription, setNewSourceDescription] = useState("");
   const [newSourceUrl, setNewSourceUrl] = useState(prefillUrl ?? "");

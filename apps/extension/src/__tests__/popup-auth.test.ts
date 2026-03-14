@@ -23,4 +23,15 @@ describe("popup auth action", () => {
     expect(html).toContain("/sources/new");
     expect(html).toContain("example.com");
   });
+
+  it("includes tab title as name param in add source link", () => {
+    const html = authActionHtml(
+      false,
+      undefined,
+      "https://example.com",
+      "Example Site",
+    );
+    expect(html).toContain("name=Example+Site");
+    expect(html).toContain("url=");
+  });
 });
