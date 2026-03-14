@@ -35,7 +35,15 @@ mock.module("drizzle-orm", () => ({
 
 mock.module("@/lib/rate-limiter", () => ({
   checkRateLimit: mock(() => ({ allowed: true, retryAfter: 0 })),
-  RATE_LIMITS: { API_LOOKUP: {} },
+  RATE_LIMITS: { API_LOOKUP: {}, SOURCE_CREATE: {} },
+}));
+
+mock.module("@/app/api/v1/lib/auth", () => ({
+  requireAuth: mock(async () => ({ ok: true, userId: "user-uuid-1" })),
+}));
+
+mock.module("@/app/lib/auth", () => ({
+  auth: { api: { getSession: mock(async () => null) } },
 }));
 
 const { GET, normalizeUrl } = await import("@/app/api/v1/sources/route");

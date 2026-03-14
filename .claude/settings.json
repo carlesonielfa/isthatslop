@@ -3,6 +3,7 @@
     "allow": [
       "Bash(ls:*)",
       "Bash(echo:*)",
+      "Bash(grep:*)",
       "Bash(git commit:*)",
       "Bash(git check-ignore:*)",
       "Bash(git diff:*)",
@@ -10,6 +11,7 @@
       "Bash(git status:*)",
       "Bash(git add:*)",
       "Bash(bun run:*)",
+      "Bash(bun test:*)",
       "Bash(bun format:*)",
       "Bash(bun lint:*)",
       "Bash(bun check-types:*)",
@@ -20,11 +22,13 @@
       "Bash(echo:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
+      "Bash(cd:*)",
       "Bash(mkdir:*)",
       "Bash(wc:*)",
       "Bash(head:*)",
       "Bash(tail:*)",
       "Bash(sort:*)",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\":*)",
       "WebSearch"
     ],
     "deny": [

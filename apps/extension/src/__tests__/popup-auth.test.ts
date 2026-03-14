@@ -10,16 +10,17 @@ describe("popup auth action", () => {
     expect(html).toContain('class="sign-in-btn"');
   });
 
-  it("shows generic submit claim link when authenticated without source", () => {
-    const html = authActionHtml(false);
-    expect(html).toContain("Submit a claim");
-    expect(html).toContain("/claims/new");
-    expect(html).not.toContain("source=");
-  });
-
-  it("includes source query param when authenticated with a source id", () => {
+  it("shows submit claim link when authenticated with a source id", () => {
     const html = authActionHtml(false, "abc-123");
     expect(html).toContain("Submit a claim");
     expect(html).toContain("/claims/new?source=abc-123");
+    expect(html).toContain('target="_blank"');
+  });
+
+  it("shows add source link when authenticated without source id", () => {
+    const html = authActionHtml(false, undefined, "https://example.com");
+    expect(html).toContain("Add source");
+    expect(html).toContain("/sources/new");
+    expect(html).toContain("example.com");
   });
 });

@@ -4,14 +4,23 @@ import { checkAuth } from "../../src/lib/auth";
 import { API_BASE } from "../../src/lib/env";
 
 /** Returns the auth action HTML snippet — sign-in link or submit-claim link. Exported for tests. */
-export function authActionHtml(showSignIn: boolean, sourceId?: string): string {
+export function authActionHtml(
+  showSignIn: boolean,
+  sourceId?: string,
+  tabUrl?: string,
+): string {
   if (showSignIn) {
     return `<a class="sign-in-btn" href="${API_BASE}/login" target="_blank">Sign in to submit claims</a>`;
   }
-  const claimUrl = sourceId
-    ? `${API_BASE}/claims/new?source=${encodeURIComponent(sourceId)}`
-    : `${API_BASE}/claims/new`;
-  return `<a class="sign-in-btn" href="${claimUrl}" target="_blank">Submit a claim</a>`;
+  if (sourceId) {
+    const claimUrl = `${API_BASE}/claims/new?source=${encodeURIComponent(sourceId)}`;
+    return `<a class="sign-in-btn" href="${claimUrl}" target="_blank">Submit a claim</a>`;
+  }
+  // Unscored source — forward to new source page with URL pre-filled
+  const newSourceUrl = tabUrl
+    ? `${API_BASE}/sources/new?url=${encodeURIComponent(tabUrl)}`
+    : `${API_BASE}/sources/new`;
+  return `<a class="sign-in-btn" href="${newSourceUrl}" target="_blank">Add source &amp; claim</a>`;
 }
 
 function renderScored(
@@ -21,6 +30,8 @@ function renderScored(
   sourceId: string,
   showSignIn: boolean,
 ): void {
+  if (typeof document === "undefined") return;
+
   const content = document.getElementById("content")!;
   content.innerHTML = `
     <div>
@@ -32,12 +43,13 @@ function renderScored(
   `;
 }
 
-function renderUnscored(showSignIn: boolean): void {
+function renderUnscored(showSignIn: boolean, tabUrl?: string): void {
+  if (typeof document === "undefined") return;
+
   const content = document.getElementById("content")!;
   content.innerHTML = `
     <div style="color: var(--muted-foreground)">This source hasn't been rated yet.</div>
-    <a class="source-link" href="${API_BASE}" target="_blank">Submit on IsThatSlop</a>
-    ${authActionHtml(showSignIn)}
+    ${authActionHtml(showSignIn, undefined, tabUrl)}
   `;
 }
 
@@ -48,6 +60,7 @@ async function main(): Promise<void> {
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const tab = tabs[0];
+
     if (!tab?.url) {
       renderUnscored(showSignIn);
     } else {
@@ -58,7 +71,7 @@ async function main(): Promise<void> {
       })) as number | null;
 
       if (tier === null) {
-        renderUnscored(showSignIn);
+        renderUnscored(showSignIn, tab.url);
       } else {
         // Render tier immediately from cache (no API needed)
         renderScored(tier, normalized, 0, "", showSignIn);
