@@ -30,10 +30,12 @@ mock.module("@repo/database", () => ({
   sources: {},
 }));
 
-const requireAuthMock = mock(async (): Promise<AuthResult> => ({
-  ok: true,
-  userId: "user-uuid-1",
-}));
+const requireAuthMock = mock(
+  async (): Promise<AuthResult> => ({
+    ok: true,
+    userId: "user-uuid-1",
+  }),
+);
 mock.module("@/app/api/v1/lib/auth", () => ({
   requireAuth: requireAuthMock,
 }));
