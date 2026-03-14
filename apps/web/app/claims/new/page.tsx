@@ -5,7 +5,7 @@ import { getSourceDetailByIdDTO } from "@/data/sources";
 import { getCurrentUser } from "@/app/lib/auth.server";
 
 interface ClaimNewPageProps {
-  searchParams: Promise<{ source?: string }>;
+  searchParams: Promise<{ source?: string; url?: string }>;
 }
 
 export const metadata = {
@@ -16,7 +16,7 @@ export const metadata = {
 export default async function ClaimNewPage({
   searchParams,
 }: ClaimNewPageProps) {
-  const { source: sourceId } = await searchParams;
+  const { source: sourceId, url: prefillUrl } = await searchParams;
   const user = await getCurrentUser();
 
   // Require authentication
@@ -60,7 +60,10 @@ export default async function ClaimNewPage({
         </Link>
       </div>
 
-      <ClaimSubmissionForm preselectedSource={preselectedSource} />
+      <ClaimSubmissionForm
+        preselectedSource={preselectedSource}
+        prefillUrl={prefillUrl}
+      />
 
       <div className="mt-6 text-center text-xs text-muted-foreground">
         <p>
