@@ -71,7 +71,10 @@ async function getTierWithFallback(rawUrl: string): Promise<number | null> {
 
 // SUBMIT_CLAIM: popup asks background to POST a claim (survives popup close)
 export async function submitClaimRequest(
-  msg: Pick<SubmitClaimMessage, "sourceId" | "content" | "impact" | "confidence">,
+  msg: Pick<
+    SubmitClaimMessage,
+    "sourceId" | "content" | "impact" | "confidence"
+  >,
 ): Promise<SubmitClaimResponse> {
   const { authToken } = await chrome.storage.local.get("authToken");
   if (!authToken) {
@@ -95,7 +98,11 @@ export async function submitClaimRequest(
     if (res.status === 429) {
       const retryAfter = Number(res.headers.get("Retry-After") ?? 0);
       const data = (await res.json()) as { error?: string };
-      return { ok: false, error: data.error ?? "Too many requests", retryAfter };
+      return {
+        ok: false,
+        error: data.error ?? "Too many requests",
+        retryAfter,
+      };
     }
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };

@@ -5,7 +5,9 @@
     "moduleResolution": "bundler",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["chrome"]
   },
-  "include": ["src", "entrypoints", "wxt.config.ts", ".wxt/wxt.d.ts"]
+  "include": ["src", "entrypoints", "wxt.config.ts", ".wxt/wxt.d.ts"],
+  "exclude": ["node_modules", "src/__tests__"]
 }

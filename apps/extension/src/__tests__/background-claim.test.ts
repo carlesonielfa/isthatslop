@@ -9,9 +9,8 @@ import { chromeMock } from "./mocks/chrome";
   _fn: () => void,
 ) => {};
 
-const { submitClaimRequest, createSourceRequest } = await import(
-  "../../entrypoints/background"
-);
+const { submitClaimRequest, createSourceRequest } =
+  await import("../../entrypoints/background");
 
 const TEST_TOKEN = "test-bearer-token";
 const VALID_UUID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
@@ -52,11 +51,12 @@ describe("SUBMIT_CLAIM background handler", () => {
   });
 
   it("returns { ok: true, claimId, sourceId } on success", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(
-        JSON.stringify({ claimId: "claim-uuid-1", sourceId: VALID_UUID }),
-        { status: 201 },
-      ),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({ claimId: "claim-uuid-1", sourceId: VALID_UUID }),
+          { status: 201 },
+        ),
     ) as unknown as typeof fetch;
 
     const result = await submitClaimRequest({
@@ -74,8 +74,11 @@ describe("SUBMIT_CLAIM background handler", () => {
   });
 
   it("returns { ok: false, error } on API error", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+        }),
     ) as unknown as typeof fetch;
 
     const result = await submitClaimRequest({
@@ -90,11 +93,12 @@ describe("SUBMIT_CLAIM background handler", () => {
   });
 
   it("returns { ok: false, error, retryAfter } on 429 response", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ error: "Rate limited" }), {
-        status: 429,
-        headers: { "Retry-After": "60" },
-      }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ error: "Rate limited" }), {
+          status: 429,
+          headers: { "Retry-After": "60" },
+        }),
     ) as unknown as typeof fetch;
 
     const result = await submitClaimRequest({
@@ -117,11 +121,12 @@ describe("CREATE_SOURCE background handler", () => {
   });
 
   it("calls POST /api/v1/sources with bearer token and returns { id, name }", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(
-        JSON.stringify({ id: "source-uuid-1", name: "Test Source" }),
-        { status: 201 },
-      ),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({ id: "source-uuid-1", name: "Test Source" }),
+          { status: 201 },
+        ),
     ) as unknown as typeof fetch;
 
     const result = await createSourceRequest({
@@ -137,8 +142,9 @@ describe("CREATE_SOURCE background handler", () => {
   });
 
   it("returns { ok: false, error } on API error", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 }),
     ) as unknown as typeof fetch;
 
     const result = await createSourceRequest({

@@ -4,7 +4,11 @@ import { checkAuth } from "../../src/lib/auth";
 import { API_BASE } from "../../src/lib/env";
 
 /** Returns the auth action HTML snippet — sign-in link or submit-claim link. Exported for tests. */
-export function authActionHtml(showSignIn: boolean, sourceId?: string, tabUrl?: string): string {
+export function authActionHtml(
+  showSignIn: boolean,
+  sourceId?: string,
+  tabUrl?: string,
+): string {
   if (showSignIn) {
     return `<a class="sign-in-btn" href="${API_BASE}/login" target="_blank">Sign in to submit claims</a>`;
   }

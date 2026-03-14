@@ -218,10 +218,7 @@ export async function POST(request: NextRequest) {
   const newId = inserted[0]!.id;
 
   // Set path to own ID (root node materialized path)
-  await db
-    .update(sources)
-    .set({ path: newId })
-    .where(eq(sources.id, newId));
+  await db.update(sources).set({ path: newId }).where(eq(sources.id, newId));
 
   return Response.json(
     { id: newId, name: parsed.data.name },

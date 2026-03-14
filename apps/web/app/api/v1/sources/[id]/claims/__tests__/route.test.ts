@@ -30,18 +30,22 @@ mock.module("@repo/database", () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const requireAuthMock = mock(async (): Promise<any> => ({
-  ok: true,
-  userId: "user-uuid-1",
-}));
+const requireAuthMock = mock(
+  async (): Promise<any> => ({
+    ok: true,
+    userId: "user-uuid-1",
+  }),
+);
 mock.module("@/app/api/v1/lib/auth", () => ({
   requireAuth: requireAuthMock,
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getSessionMock = mock(async (): Promise<any> => ({
-  user: { emailVerified: true },
-}));
+const getSessionMock = mock(
+  async (): Promise<any> => ({
+    user: { emailVerified: true },
+  }),
+);
 mock.module("@/app/lib/auth", () => ({
   auth: { api: { getSession: getSessionMock } },
 }));
@@ -67,11 +71,14 @@ function makeRequest(
   body: unknown,
   headers?: Record<string, string>,
 ): NextRequest {
-  const req = new Request(`http://localhost/api/v1/sources/${params.id}/claims`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body: JSON.stringify(body),
-  });
+  const req = new Request(
+    `http://localhost/api/v1/sources/${params.id}/claims`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
+    },
+  );
   return req as unknown as NextRequest;
 }
 
@@ -109,7 +116,9 @@ describe("POST /api/v1/sources/:id/claims", () => {
 
   test("returns 201 with { claimId, sourceId } when authenticated and valid", async () => {
     const req = makeRequest({ id: VALID_UUID }, VALID_BODY);
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body).toHaveProperty("claimId", "claim-uuid-1");
@@ -122,7 +131,9 @@ describe("POST /api/v1/sources/:id/claims", () => {
       response: Response.json({ error: "Unauthorized" }, { status: 401 }),
     }));
     const req = makeRequest({ id: VALID_UUID }, VALID_BODY);
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(401);
   });
 
@@ -131,7 +142,9 @@ describe("POST /api/v1/sources/:id/claims", () => {
       user: { emailVerified: false },
     }));
     const req = makeRequest({ id: VALID_UUID }, VALID_BODY);
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body).toHaveProperty("error", "Email verification required");
@@ -143,14 +156,18 @@ describe("POST /api/v1/sources/:id/claims", () => {
       retryAfter: 60,
     }));
     const req = makeRequest({ id: VALID_UUID }, VALID_BODY);
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBe("60");
   });
 
   test("returns 422 when impact is out of range (0)", async () => {
     const req = makeRequest({ id: VALID_UUID }, { ...VALID_BODY, impact: 0 });
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(422);
     const body = await res.json();
     expect(body).toHaveProperty("error");
@@ -158,7 +175,9 @@ describe("POST /api/v1/sources/:id/claims", () => {
 
   test("returns 422 when impact is out of range (6)", async () => {
     const req = makeRequest({ id: VALID_UUID }, { ...VALID_BODY, impact: 6 });
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(422);
   });
 
@@ -167,7 +186,9 @@ describe("POST /api/v1/sources/:id/claims", () => {
       { id: VALID_UUID },
       { ...VALID_BODY, confidence: 0 },
     );
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(422);
     const body = await res.json();
     expect(body).toHaveProperty("error");
@@ -178,7 +199,9 @@ describe("POST /api/v1/sources/:id/claims", () => {
       { id: VALID_UUID },
       { ...VALID_BODY, content: "a".repeat(99) },
     );
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(422);
   });
 
@@ -187,7 +210,9 @@ describe("POST /api/v1/sources/:id/claims", () => {
       { id: VALID_UUID },
       { ...VALID_BODY, content: "a".repeat(2001) },
     );
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(422);
   });
 
@@ -195,7 +220,9 @@ describe("POST /api/v1/sources/:id/claims", () => {
     mockSelectResult = [];
     drizzleSelectChain.limit.mockImplementation(async () => []);
     const req = makeRequest({ id: VALID_UUID }, VALID_BODY);
-    const res = await POST(req, { params: Promise.resolve({ id: VALID_UUID }) });
+    const res = await POST(req, {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body).toHaveProperty("error", "Source not found");

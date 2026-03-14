@@ -27,18 +27,22 @@ mock.module("@repo/database", () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const requireAuthMock = mock(async (): Promise<any> => ({
-  ok: true,
-  userId: "user-uuid-1",
-}));
+const requireAuthMock = mock(
+  async (): Promise<any> => ({
+    ok: true,
+    userId: "user-uuid-1",
+  }),
+);
 mock.module("@/app/api/v1/lib/auth", () => ({
   requireAuth: requireAuthMock,
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getSessionMock = mock(async (): Promise<any> => ({
-  user: { emailVerified: true },
-}));
+const getSessionMock = mock(
+  async (): Promise<any> => ({
+    user: { emailVerified: true },
+  }),
+);
 mock.module("@/app/lib/auth", () => ({
   auth: { api: { getSession: getSessionMock } },
 }));
