@@ -9,7 +9,7 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limiter";
 import { normalizeUrl } from "@repo/scoring";
 import { requireAuth } from "@/app/api/v1/lib/auth";
 import { auth } from "@/app/lib/auth";
-import { validateSourceName, generateSlug } from "@isthatslop/validation";
+import { validateSourceName, generateSlug } from "@/lib/validation";
 
 const CORS_HEADERS = {
   // TODO: lock down to chrome-extension://<ID> once extension has a stable ID (Phase 12)

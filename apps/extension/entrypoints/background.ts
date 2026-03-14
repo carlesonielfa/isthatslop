@@ -1,12 +1,6 @@
 import { getIconPaths } from "../src/lib/icon-state";
 import { normalizeUrl } from "../src/lib/dispatch";
 import { API_BASE } from "../src/lib/env";
-import type {
-  SubmitClaimMessage,
-  SubmitClaimResponse,
-  CreateSourceMessage,
-  CreateSourceResponse,
-} from "../src/lib/claim";
 
 const ALARM_NAME = "score-cache-refresh";
 const PERIOD_MINUTES = 24 * 60; // 1440 minutes
@@ -69,82 +63,6 @@ async function getTierWithFallback(rawUrl: string): Promise<number | null> {
   return getTierForUrl(normalized.slice(0, slashIdx));
 }
 
-// SUBMIT_CLAIM: popup asks background to POST a claim (survives popup close)
-export async function submitClaimRequest(
-  msg: Pick<
-    SubmitClaimMessage,
-    "sourceId" | "content" | "impact" | "confidence"
-  >,
-): Promise<SubmitClaimResponse> {
-  const { authToken } = await chrome.storage.local.get("authToken");
-  if (!authToken) {
-    return { ok: false, error: "Not authenticated" };
-  }
-  try {
-    const res = await fetch(
-      new Request(`${API_BASE}/api/v1/sources/${msg.sourceId}/claims`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken as string}`,
-        },
-        body: JSON.stringify({
-          content: msg.content,
-          impact: msg.impact,
-          confidence: msg.confidence,
-        }),
-      }),
-    );
-    if (res.status === 429) {
-      const retryAfter = Number(res.headers.get("Retry-After") ?? 0);
-      const data = (await res.json()) as { error?: string };
-      return {
-        ok: false,
-        error: data.error ?? "Too many requests",
-        retryAfter,
-      };
-    }
-    if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      return { ok: false, error: data.error ?? `HTTP ${res.status}` };
-    }
-    const data = (await res.json()) as { claimId: string; sourceId: string };
-    return { ok: true, claimId: data.claimId, sourceId: data.sourceId };
-  } catch {
-    return { ok: false, error: "Network error" };
-  }
-}
-
-// CREATE_SOURCE: popup asks background to POST a new source
-export async function createSourceRequest(
-  msg: Pick<CreateSourceMessage, "name" | "url">,
-): Promise<CreateSourceResponse> {
-  const { authToken } = await chrome.storage.local.get("authToken");
-  if (!authToken) {
-    return { ok: false, error: "Not authenticated" };
-  }
-  try {
-    const res = await fetch(
-      new Request(`${API_BASE}/api/v1/sources`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken as string}`,
-        },
-        body: JSON.stringify({ name: msg.name, url: msg.url }),
-      }),
-    );
-    if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      return { ok: false, error: data.error ?? `HTTP ${res.status}` };
-    }
-    const data = (await res.json()) as { id: string; name: string };
-    return { ok: true, id: data.id, name: data.name };
-  } catch {
-    return { ok: false, error: "Network error" };
-  }
-}
-
 export default defineBackground(() => {
   // MUST be top-level — not inside any async callback
   chrome.alarms.onAlarm.addListener((alarm) => {
@@ -180,22 +98,6 @@ export default defineBackground(() => {
     if (msg.type === "GET_TIER") {
       void getTierForUrl(msg.url as string).then(sendResponse);
       return true; // keep channel open for async response
-    }
-  });
-
-  // SUBMIT_CLAIM: popup asks background to POST a claim (survives popup close)
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg.type === "SUBMIT_CLAIM") {
-      void submitClaimRequest(msg as SubmitClaimMessage).then(sendResponse);
-      return true;
-    }
-  });
-
-  // CREATE_SOURCE: popup asks background to POST a new source
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg.type === "CREATE_SOURCE") {
-      void createSourceRequest(msg as CreateSourceMessage).then(sendResponse);
-      return true;
     }
   });
 

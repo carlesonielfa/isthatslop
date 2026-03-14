@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import type { NextRequest } from "next/server";
+import type { AuthResult } from "@/app/api/v1/lib/auth";
 
 // Build a chainable Drizzle mock that supports both SELECT and INSERT chains
 let mockSelectResult: unknown[] = [{ id: "source-uuid-1" }];
@@ -29,23 +30,17 @@ mock.module("@repo/database", () => ({
   sources: {},
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const requireAuthMock = mock(
-  async (): Promise<any> => ({
-    ok: true,
-    userId: "user-uuid-1",
-  }),
-);
+const requireAuthMock = mock(async (): Promise<AuthResult> => ({
+  ok: true,
+  userId: "user-uuid-1",
+}));
 mock.module("@/app/api/v1/lib/auth", () => ({
   requireAuth: requireAuthMock,
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getSessionMock = mock(
-  async (): Promise<any> => ({
-    user: { emailVerified: true },
-  }),
-);
+const getSessionMock = mock(async () => ({
+  user: { emailVerified: true },
+}));
 mock.module("@/app/lib/auth", () => ({
   auth: { api: { getSession: getSessionMock } },
 }));
