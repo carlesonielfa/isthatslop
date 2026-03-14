@@ -36,17 +36,25 @@ interface ClaimSubmissionFormProps {
     tier: number | null;
     claimCount: number;
   } | null;
+  prefillUrl?: string;
+  prefillName?: string;
 }
 
 export function ClaimSubmissionForm({
   preselectedSource,
+  prefillUrl,
+  prefillName,
 }: ClaimSubmissionFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   // Form state
   const [mode, setMode] = useState<FormMode>(
-    preselectedSource ? "write-claim" : "select-source",
+    preselectedSource
+      ? "write-claim"
+      : prefillUrl
+        ? "create-source"
+        : "select-source",
   );
   const [selectedSource, setSelectedSource] =
     useState<SearchSourcesResult | null>(
@@ -64,11 +72,13 @@ export function ClaimSubmissionForm({
     );
 
   // New source creation fields
-  const [isCreatingNewSource, setIsCreatingNewSource] = useState(false);
-  const [newSourceName, setNewSourceName] = useState("");
+  const [isCreatingNewSource, setIsCreatingNewSource] = useState(
+    !!prefillUrl && !preselectedSource,
+  );
+  const [newSourceName, setNewSourceName] = useState(prefillName ?? "");
   const [newSourceType, setNewSourceType] = useState("");
   const [newSourceDescription, setNewSourceDescription] = useState("");
-  const [newSourceUrl, setNewSourceUrl] = useState("");
+  const [newSourceUrl, setNewSourceUrl] = useState(prefillUrl ?? "");
   const [newSourceParent, setNewSourceParent] =
     useState<SearchSourcesResult | null>(null);
 
